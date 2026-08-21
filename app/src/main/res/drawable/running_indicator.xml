@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FIX: خط مستدير الأطراف للتطبيق النشط، ونقطة دائرية للخلفية
+     الحجم يُعيَّن في الكود: 16×3dp نشط / 4×4dp خلفية -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="10dp"/>
+    <solid android:color="#CCFFFFFF"/>
+</shape>

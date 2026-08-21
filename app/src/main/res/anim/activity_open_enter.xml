@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pixel-style enter: fade + subtle slide up from 3% -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/decelerate_cubic">
+    <alpha
+        android:fromAlpha="0.0"
+        android:toAlpha="1.0"
+        android:duration="280" />
+    <translate
+        android:fromYDelta="3%"
+        android:toYDelta="0%"
+        android:duration="280" />
+</set>

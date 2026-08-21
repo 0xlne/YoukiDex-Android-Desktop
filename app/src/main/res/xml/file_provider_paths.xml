@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- ملفات Downloads/YoukiDex/ -->
+    <external-path name="youki_downloads" path="." />
+    <!-- ملفات داخلية لو احتجنا -->
+    <files-path name="youki_internal" path="." />
+</paths>

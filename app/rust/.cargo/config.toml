@@ -1,0 +1,21 @@
+# Per-target linker configuration for cross-compiling to Android via cargo-ndk.
+#
+# NOTE: explicit [target.*] linker overrides were removed from this file
+# after a real build on an AndroidIDE/Termux-based environment showed
+# cargo-ndk resolving the WRONG per-ABI linker name (an armeabi-v7a build
+# reaching for "aarch64-linux-android24-clang" — an arm64 linker name).
+# Having both this file's hardcoded linker names AND cargo-ndk's own
+# automatic per-invocation environment variables meant two potentially
+# disagreeing sources of truth for linker resolution. The fix applied was
+# adding an explicit `-p 24` (target API level) flag to the actual `cargo
+# ndk` invocation in app/build.gradle's cargoBuild task, which resolved the
+# ambiguity at its source. This file is now intentionally empty of
+# per-target overrides so cargo-ndk's own resolution (now unambiguous
+# thanks to -p 24) is the single source of truth, rather than two
+# potentially-conflicting configurations.
+#
+# If a future `cargo check`/`cargo build` invoked directly (bypassing
+# cargo-ndk and Gradle entirely) needs an explicit linker again, add the
+# relevant [target.*] section back — but verify it doesn't reintroduce this
+# same conflict against cargo-ndk's own resolution first.
+

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/vp_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:keepScreenOn="true">
+
+    <!-- PlayerView -->
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/vp_player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:focusable="false"
+        app:use_controller="false"
+        app:resize_mode="fit"/>
+
+    <!-- Top bar always fixed -->
+    <LinearLayout
+        android:id="@+id/vp_top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="top"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:background="@drawable/bg_vp_scrim_top">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/vp_btn_back"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_arrow_back"
+            app:iconTint="#FFFFFFFF"
+            app:iconSize="24dp"
+            android:contentDescription="@string/back"/>
+
+        <TextView
+            android:id="@+id/vp_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+    </LinearLayout>
+
+    <!-- Play/Pause button fixed at the bottom -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/vp_btn_play_pause"
+        style="@style/Widget.Material3.Button.IconButton.Filled"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        app:icon="@drawable/ic_pause"
+        app:iconSize="34dp"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:backgroundTint="?attr/colorPrimaryContainer"
+        app:iconTint="?attr/colorOnPrimaryContainer"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Vp.PlayBtn.Circle"
+        android:contentDescription="@string/play_pause"/>
+
+</FrameLayout>

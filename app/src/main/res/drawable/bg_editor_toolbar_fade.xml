@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    خلفية الـ Toolbar العائم فوق المعاينة مباشرة (بدون أي صندوق صلد خلفه).
+    تدرّج بسيط من أسود خفيف بالأعلى إلى شفاف تماماً بالأسفل، فقط لضمان
+    وضوح زر الرجوع والعنوان الأبيض فوق أي خلفية فيديو فاتحة، دون حجب
+    المعاينة الحية خلفه (المطلوب: "فلتجعل الشاشة كامله").
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#66000000"
+        android:endColor="#00000000" />
+</shape>

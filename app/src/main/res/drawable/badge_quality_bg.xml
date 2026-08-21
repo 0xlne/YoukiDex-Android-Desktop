@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    badge_quality_bg.xml
+    خلفية شارة الجودة (4K / 1080p / HD) — تظهر فوق الصورة في الزاوية العلوية
+    اللون: أزرق التطبيق الأساسي (md_theme_dark_primary) مع شفافية خفيفة
+    ليبدو احترافياً فوق أي صورة خلفية
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#CC0040A0" />
+    <corners android:radius="6dp" />
+    <stroke
+        android:width="1dp"
+        android:color="#4DB1C5FF" />
+</shape>

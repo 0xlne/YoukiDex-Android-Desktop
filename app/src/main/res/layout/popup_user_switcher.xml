@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    popup_user_switcher.xml — redesigned
+    - Background: popup_dark_bg (the color is applied in code from bubbleColor)
+    - Header: the current user with avatar + name + ID
+    - The users list
+    - An add button at the bottom with a direction arrow
+    - 250dp width — more readable than 230dp
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="250dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/popup_dark_bg"
+    android:elevation="32dp"
+    android:padding="8dp">
+
+    <!-- ══ Header: the current user ══ -->
+    <LinearLayout
+        android:id="@+id/switcher_header_chip"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/popup_item_bg"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:layout_marginBottom="6dp">
+
+        <!-- The current user's photo -->
+        <ImageView
+            android:id="@+id/switcher_current_avatar"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:src="@drawable/ic_user"
+            android:scaleType="centerCrop" />
+
+        <!-- The name + ID -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="11dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/switcher_current_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="User"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/switcher_current_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ID: 0"
+                android:textColor="#88FFFFFF"
+                android:textSize="11sp"
+                android:layout_marginTop="1dp" />
+        </LinearLayout>
+
+        <!-- The privilege confirmation icon -->
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_granted"
+            android:alpha="0.65" />
+
+    </LinearLayout>
+
+    <!-- ══ Divider ══ -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="4dp"
+        android:background="#28FFFFFF" />
+
+    <!-- ══ The users list ══ -->
+    <LinearLayout
+        android:id="@+id/switcher_users_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <!-- ══ Divider ══ -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
+        android:background="#28FFFFFF" />
+
+    <!-- ══ The add user button ══ -->
+    <LinearLayout
+        android:id="@+id/switcher_add_user_btn"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/popup_item_bg"
+        android:paddingStart="12dp"
+        android:paddingEnd="10dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_user"
+            android:scaleType="centerInside"
+            android:alpha="0.75" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/add_user"
+            android:textColor="#CDFFFFFF"
+            android:textSize="13sp" />
+
+        <ImageView
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:src="@drawable/ic_expand_right"
+            android:alpha="0.4"
+            android:scaleType="fitCenter" />
+
+    </LinearLayout>
+
+</LinearLayout>

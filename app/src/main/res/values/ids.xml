@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Used to tag the resize-handle overlay FrameLayout that DesktopWidgetManager adds
+         next to each AppWidgetHostView, so LauncherActivity.loadDesktopApps() can skip
+         removing it during its selective desktopContainer cleanup (see FIX comment there). -->
+    <item name="desktop_widget_overlay_tag" type="id" />
+    <!-- Tags a desktop icon/folder/widget View with its DesktopOccupancyGrid item id
+         (e.g. "app:com.example", "folder:<uuid>", "widget:<appWidgetId>") so
+         resolveDesktopDrop() can find and reposition the right view when a drag causes
+         pushes elsewhere on the grid. -->
+    <item name="desktop_item_id_tag" type="id" />
+    <!-- Widget grid span tags — how many columns/rows the item occupies (1×1 for icons). -->
+    <item name="desktop_item_col_span_tag" type="id" />
+    <item name="desktop_item_row_span_tag" type="id" />
+    <item name="preference_row_animated_tag" type="id" />
+</resources>

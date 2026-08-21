@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    swatch_color_blue.xml — أيقونة لون حقيقية (دائرة مصمتة) لخيار "Blue" في
+    Background Color، تستبدل الإيموجي النصي السابق (🟦).
+
+    🔵 سبب المشكلة الأصلية ("أزرق في أزرق"): إيموجي 🟦 كان نصاً عادياً داخل
+    الـ Chip، وMaterial Filter Chip يلوّن خلفية نفسه بلون التحديد (Theme
+    accent — غالباً أزرق أيضاً بمعظم الثيمات) عندما يكون محدداً. النتيجتان
+    الزرقاوان (لون التحديد + إيموجي المربع الأزرق) كانتا تتراكب فتُفقد كل
+    تمايز بصري بين "هل هذا مجرد تحديد Chip عادي أم لون الخلفية الفعلي
+    المُختار؟". الحل: لون أزرق ثابت **مختلف عمداً** عن لون accent الافتراضي
+    لأي Material You ثيم (هنا أزرق ملكي/Royal أعمق وأكثر تشبعاً)، بحيث يبقى
+    مميزاً بصرياً بغض النظر عن لون تحديد الـ Chip المستخدم في أي ثيم.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#FF1565C0" />
+    <stroke android:width="1dp" android:color="#33000000" />
+    <size android:width="18dp" android:height="18dp" />
+</shape>

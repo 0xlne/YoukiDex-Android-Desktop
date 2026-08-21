@@ -1,0 +1,236 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Pixel-style smooth transitions between all screens -->
+    <style name="YoukiWindowAnimation" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/activity_open_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/activity_open_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/activity_close_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/activity_close_exit</item>
+    </style>
+
+    <!-- FIX ("ألوان التطبيق ثابتة على الماتيريال غامق" — colors were pinned to
+         dark regardless of the system's light/dark setting): AppTheme used to
+         hardcode every color to md_theme_dark_* directly, with no
+         values-night variant at all — so the whole app (dock, desktop,
+         menus, settings) stayed dark no matter what. A full matching
+         md_theme_light_* set already existed in colors.xml but was never
+         wired into any theme. Android's day/night resource system expects
+         the DEFAULT values/ resources to be the LIGHT variant, with a
+         values-night/themes.xml override (same style name, "AppTheme")
+         supplying the dark colors — that's what makes AppCompat/the system
+         switch between them automatically based on the device setting, with
+         no code needed on our side. See values-night/themes.xml for the
+         dark counterpart of this exact style. -->
+    <style name="AppTheme" parent="Theme.Material3.Light">
+        <item name="colorPrimary">@color/md_theme_light_primary</item>
+
+        <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_light_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_light_onPrimaryContainer</item>
+        <item name="colorSecondary">@color/md_theme_light_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_light_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/md_theme_light_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/md_theme_light_onSecondaryContainer</item>
+        <item name="colorTertiary">@color/md_theme_light_tertiary</item>
+        <item name="colorOnTertiary">@color/md_theme_light_onTertiary</item>
+        <item name="colorTertiaryContainer">@color/md_theme_light_tertiaryContainer</item>
+        <item name="colorOnTertiaryContainer">@color/md_theme_light_onTertiaryContainer</item>
+        <item name="colorError">@color/md_theme_light_error</item>
+        <item name="colorErrorContainer">@color/md_theme_light_errorContainer</item>
+        <item name="colorOnError">@color/md_theme_light_onError</item>
+        <item name="colorOnErrorContainer">@color/md_theme_light_onErrorContainer</item>
+        <item name="android:colorBackground">@color/md_theme_light_background</item>
+        <item name="colorOnBackground">@color/md_theme_light_onBackground</item>
+        <item name="colorSurface">@color/md_theme_light_surface</item>
+        <item name="colorOnSurface">@color/md_theme_light_onSurface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_light_surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_light_onSurfaceVariant</item>
+        <item name="colorOutline">@color/md_theme_light_outline</item>
+        <!-- Widget.Material3.CardView.Outlined (below) draws its border
+             using this attr — bound here since it wasn't set anywhere in
+             this theme, and Material3's own fallback for it is much
+             lighter than this app's dark palette. -->
+        <item name="colorOutlineVariant">@color/md_theme_light_outlineVariant</item>
+        <item name="colorOnSurfaceInverse">@color/md_theme_light_inverseOnSurface</item>
+        <item name="colorSurfaceInverse">@color/md_theme_light_inverseSurface</item>
+        <item name="colorPrimaryInverse">@color/md_theme_light_inversePrimary</item>
+        <item name="alertDialogTheme">@style/DialogTheme</item>
+        <!-- FIX (every card in the app still showed a thin border after
+             removing strokeWidth/strokeColor from every individual
+             MaterialCardView layout): with no materialCardViewStyle set on
+             the theme, MaterialCardView falls back to the library's own
+             default card style, which is stroke-based (Outlined-style) —
+             none of the per-layout edits could touch that, since none of
+             them were setting the stroke in the first place. Forcing the
+             Filled variant here (no stroke, elevation/tonal surface only)
+             is the actual single point of control for every card's border
+             across the app. -->
+        <item name="materialCardViewStyle">@style/Widget.Material3.CardView.Outlined</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="toolbarStyle">?attr/toolbarSurfaceStyle</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="preferenceTheme">@style/ThemeOverlay.App.Preference</item>
+        <item name="shapeAppearanceCornerFull">@style/ShapeAppearance.App.CornerFull</item>
+        <item name="colorBackground">@color/md_theme_light_background</item>
+        <item name="android:windowAnimationStyle">@style/YoukiWindowAnimation</item>
+    </style>
+
+    <style name="ShapeAppearance.App.CornerFull" parent="ShapeAppearance.Material3.Corner.Full">
+    </style>
+
+    <!-- FIX (dock/desktop stayed dark regardless of system setting): this
+         used to hardcode parent="Theme.Material3.Dark" directly plus fixed
+         white accent colors — meaning the dock, App Menu, power menu, and
+         audio panel (see PerfectServer.kt's ContextThemeWrapper usages)
+         stayed dark and used white-on-white accents no matter the device's
+         light/dark setting. Now inherits from AppTheme itself, so it
+         automatically gets whichever variant (this file for light,
+         values-night/themes.xml for dark) the system currently has active
+         — same mechanism, no separate color set to keep in sync by hand. -->
+    <style name="AppTheme.Dock" parent="AppTheme" />
+
+    <style name="AppTheme.Launcher" parent="AppTheme">
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:fitsSystemWindows">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- PERF: No white flash on cold start -->
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <!-- NOTCH FIX: Draw content into the display cutout area (camera hole/notch).
+             Without this the system reserves the cutout as a letterbox and any overlay
+             window (like PerfectServer's dock) renders behind the cutout instead of
+             extending under it — causing the "notch appears as a layer on top" glitch.
+             "always" (not "shortEdges"): shortEdges only lets content extend into the
+             cutout on the SHORT edge — with lock_landscape on (the default) the cutout
+             usually sits on what is now a LONG edge, so shortEdges still left it
+             reserved there. "always" draws under the cutout in every orientation.
+             This is the theme-level default applied immediately at startup, before
+             LauncherActivity.hideSystemBars() re-applies the same "always" value in
+             code (kept there too since some OEM skins only honor the attributes set
+             programmatically at runtime). -->
+        <item name="android:windowLayoutInDisplayCutoutMode">always</item>
+        <!-- No window animation for the launcher itself — it sits behind everything -->
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!-- CRASH FIX: الأنشطة التي تستخدم Toolbar مخصص عبر setSupportActionBar()
+         (GalleryActivity، EditorActivity) لازم ثيم بلا ActionBar افتراضي من النظام،
+         وإلا AppCompat بيرمي IllegalStateException عند setSupportActionBar(). -->
+    <style name="AppTheme.NoActionBar" parent="AppTheme">
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+    </style>
+
+    <!-- 🖤 AppTheme.OpaqueCover — used only by QaVirtualDisplayHost. A real,
+         fully opaque black window (NOT windowNoDisplay/translucent — this
+         Activity's whole job is to sit as a visible, always-on-top black
+         cover while a probed target launches and finishes underneath it,
+         so the target itself is never seen). windowFullscreen + no
+         animation keep it a solid instant block with no edges or fade the
+         user could glimpse. Not reused for anything else in the app. -->
+    <style name="AppTheme.OpaqueCover" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- 🎬 AppTheme.VideoPlayer — ثيم مشغّل الفيديو
+         ✅ FIX: استبدلنا @android:color/black الهارد-كودد بـ Material3 tokens حتى
+         يتوافق مع لون السطح الفعلي للثيم (colorSurface) ويحترم Dynamic Color لو مُفعَّل.
+         statusBarColor و navigationBarColor = transparent لأن WindowCompat في
+         UnifiedVideoPlayerActivity يخفيهم بالكامل عبر WindowInsetsController — أي لون
+         ثاني سيظهر لجزء من ثانية (flash) عند فتح/إغلاق النشاط. -->
+    <style name="AppTheme.VideoPlayer" parent="AppTheme">
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+    </style>
+
+    <style name="DialogTheme" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="dialogCornerRadius">28dp</item>
+        <item name="cornerFamily">rounded</item>
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="android:layout" tools:ignore="PrivateResource">@layout/m3_alert_dialog</item>
+    </style>
+
+    <style name="ThemeOverlay.App.Preference" parent="PreferenceThemeOverlay">
+        <item name="switchPreferenceCompatStyle">@style/PreferenceMaterialSwitch</item>
+    </style>
+
+    <style name="PreferenceMaterialSwitch" parent="@style/Preference.SwitchPreferenceCompat.Material">
+        <item name="widgetLayout">@layout/preference_switch</item>
+    </style>
+
+    <!-- ═══ أنماط مشتركة لسلايدرز شاشة الـ Editor ═══ -->
+    <style name="SliderLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleSmall</item>
+        <item name="android:layout_marginTop">14dp</item>
+        <item name="android:layout_marginBottom">2dp</item>
+    </style>
+
+    <style name="StdSlider" parent="Widget.Material3.Slider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="trackColorActive">?attr/colorPrimary</item>
+        <!-- 🔧 FIX (أزرق في أزرق): كان trackColorInactive يستخدم نفس قيمة
+             trackColorActive (md_theme_dark_primary) بالخطأ، فالمسار كاملاً
+             يبدو بلون أزرق موحّد دون أي تفريق بصري بين الجزء المُفعّل (يسار
+             المقبض) والمسار المتبقي (يمين المقبض) — يصعب معرفة وضع القيمة
+             الفعلي بنظرة سريعة. md_theme_dark_surfaceVariant هو لون
+             Material3 القياسي المخصص تحديداً لهذا الدور (رمادي محايد خافت)،
+             وهو نفس الزوج اللوني المستخدم افتراضياً في أي Widget.Material3.Slider. -->
+        <item name="trackColorInactive">?attr/colorSurfaceVariant</item>
+        <item name="thumbColor">?attr/colorPrimary</item>
+        <item name="haloColor">@android:color/transparent</item>
+    </style>
+
+    <!-- عنوان قسم منفصل بصرياً ("↔️ العرض" / "↕️ الطول") — يفرّق بوضوح
+         بين مجموعتي إعدادات Free Mode (عرض/طول) المستقلتين عن بعض. -->
+    <style name="SliderSectionHeader">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleMedium</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:layout_marginTop">4dp</item>
+    </style>
+
+    <!-- خط فاصل رفيع تحت عنوان كل قسم مباشرة -->
+    <style name="SliderSectionDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:background">?attr/colorOutlineVariant</item>
+    </style>
+
+
+    <style name="ShapeAppearance.Vp.PlayBtn.Circle" parent="ShapeAppearance.Material3.Corner.Full">
+    </style>
+    <style name="ShapeAppearance.Vp.PlayBtn.Squircle" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">28dp</item>
+    </style>
+
+    <!-- Rounded-corner overlay for the onboarding welcome image
+         (ic_youki replacement — see fragment_onboarding_welcome.xml) -->
+    <style name="RoundedCorner16">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+</resources>

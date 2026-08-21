@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    خلفية ورقة الإعدادات (Bottom Sheet) — أسود شفاف 45٪ فعلياً، مطابقة
+    لسلوك Wallpaper Engine المرجعي (المعاينة تبقى مرئية بوضوح من خلف
+    الورقة بدل أن تُحجب خلف لون مصمت).
+
+    🔧 FIX (خطأ سابق): كان اللون هنا @android:color/white مصمتاً 100٪ —
+    رغم أن التعليق الأصلي في activity_lw_editor.xml وصف "شفافية 45٪" —
+    لأنه كان يُستبدل أصلاً بـ android:backgroundTint="?attr/colorSurface"
+    في الـ layout (لون الثيم الفاتح المصمت)، وهذا الـ backgroundTint
+    تم حذفه الآن من activity_lw_editor.xml كي يسري اللون الشفاف الحقيقي
+    المعرّف هنا فعلياً على الشاشة.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#73000000" />
+    <corners
+        android:topLeftRadius="20dp"
+        android:topRightRadius="20dp"
+        android:bottomLeftRadius="0dp"
+        android:bottomRightRadius="0dp" />
+</shape>

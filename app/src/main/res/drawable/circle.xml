@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FIX: اللون هنا placeholder — يُستبدل بـ setColorFilter() في الكود.
+  لازم يكون solid (مش transparent) عشان setColorFilter يشتغل على ShapeDrawable.
+  نفسر لونه كـ "ستُغطّى" فوراً بـ applySecondaryColor.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#FF808080" />
+</shape>

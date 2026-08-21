@@ -1,0 +1,176 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+    <!-- 1. Display Over Other Apps -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_overlay" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/display_over_other_apps"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/display_over_other_apps_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_grant_overlay"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 2. Accessibility Service -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_accessibility" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/accessibility_service"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/accessibility_service_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_manage_service"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 3. Notification Listener -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_notifications" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/notification_access"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/notification_access_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_grant_notifications"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 4. Default Launcher -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_home" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/default_launcher"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/default_launcher_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_set_default_launcher"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 5. Usage Stats -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_usage_stats" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/recent_apps"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/recent_apps_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_manage_recent_apps"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 6. All Files Access (MANAGE_EXTERNAL_STORAGE) -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_folder" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/manage_external_storage"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/manage_external_storage_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_manage_external_storage"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 7. Post Notifications -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_notifications" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/post_notifications"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/post_notifications_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_post_notifications"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 8. Bluetooth -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_bluetooth" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/bluetooth_permission"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/bluetooth_permission_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_bluetooth"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+</LinearLayout>

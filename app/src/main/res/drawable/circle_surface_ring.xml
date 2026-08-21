@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    circle_surface_ring.xml
+    دائرة بخلفية colorSurface — تُستخدم خلف الأفاتار في هيدر الإعدادات، بحيث
+    الأفاتار تبان وكأنها فوق حافة صورة الغلاف (cover photo)، مش عايمة بحافة حادة.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="?attr/colorSurface" />
+</shape>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 3-stop gradient: solid black → semi → transparent — أناعم بكتير! -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:type="linear"
+        android:angle="270"
+        android:startColor="#CC000000"
+        android:centerColor="#55000000"
+        android:centerX="0.6"
+        android:endColor="#00000000"/>
+</shape>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:layout_marginVertical="2dp"
+    android:layout_marginHorizontal="4dp"
+    android:background="@drawable/container_inner"
+    android:padding="10dp">
+
+    <!-- The color indicator (INFO/SUCCESS/WARNING/ERROR) -->
+    <View
+        android:id="@+id/debug_item_indicator"
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="10dp"
+        android:minHeight="40dp"
+        android:background="#607D8B" />
+
+    <!-- Content -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- Top row: the source name + time -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/debug_item_source"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#4CAF50"
+                tools:text="Moewalls" />
+
+            <TextView
+                android:id="@+id/debug_item_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:fontFamily="monospace"
+                tools:text="14:32:01.234" />
+
+        </LinearLayout>
+
+        <!-- The main message -->
+        <TextView
+            android:id="@+id/debug_item_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="13sp"
+            android:textColor="?attr/colorOnSurface"
+            tools:text="Static HTML fetch..." />
+
+        <!-- The details (a link or selector) -->
+        <TextView
+            android:id="@+id/debug_item_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textSize="11sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:fontFamily="monospace"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:visibility="gone"
+            tools:text="https://moewalls.com/?s=anime" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,91 @@
+[package]
+name = "youki_engine"
+version = "0.1.0"
+edition = "2021"
+# Rust edition 2021 chosen for broad toolchain compatibility with cargo-ndk;
+# revisit to 2024 once the whole team's toolchain is confirmed up to date.
+
+[lib]
+# cdylib -> produces the .so consumed via JNI by the Kotlin/Java side.
+# staticlib kept available for potential future use (e.g. linking a native
+# test harness), but cdylib is the one actually packaged into the APK.
+crate-type = ["cdylib", "rlib"]
+
+# ── youki_shell_server: standalone root/shell socket server binary ─────────
+# Replaces ShellServer.kt's `fun main()` entry point (previously launched via
+# `app_process` as a JVM process) with a true native executable — no JVM
+# startup overhead, no APK classpath needed for this piece. Same job: listen
+# on 127.0.0.1:7171, verify a session token, run shell commands as
+# root/shell uid, and stream the output back. Kotlin's ShellManager now
+# extracts this binary from assets to a private exec-able path and launches
+# it via `su -c <path>` / Shizuku instead of the old
+# `app_process / com.youki.dex.server.ShellServer` invocation.
+[[bin]]
+name = "youki_shell_server"
+path = "src/bin/youki_shell_server.rs"
+
+[dependencies]
+# ── Android/JNI bridge ──────────────────────────────────────────────────────
+jni = "0.21"
+ndk = "0.9"
+ndk-sys = "0.6"
+ndk-context = "0.1"
+
+# ── Logging (forwards to Android logcat via android_log crate) ─────────────
+log = "0.4"
+android_logger = "0.14"
+
+# ── Rendering: OpenGL ES + Vulkan ───────────────────────────────────────────
+# khronos-egl: EGL context/surface management (mirrors what WallpaperGLEngine.kt
+# did manually with android.opengl.EGL14 — same approach, now in Rust).
+khronos-egl = { version = "6.0", features = ["static", "no-pkg-config"] }
+# gles31/gl generator bindings for the OpenGL ES draw calls (shader programs,
+# VBOs, textures) that replace WallpaperGLRenderer.kt / GLProgram.kt / Quad.kt.
+gles31 = "1.0"
+# ash: Vulkan bindings — the new backend that did not exist in the Kotlin version.
+ash = "0.38"
+# ash-window / raw-window-handle: bridge from ANativeWindow (obtained via JNI
+# from the Android Surface) to a VkSurfaceKHR, and equivalent EGLSurface.
+raw-window-handle = "0.6"
+
+# ── Math (MVP matrices — replaces TransformMatrix.kt) ───────────────────────
+glam = "0.29"
+
+# ── Root/shell execution (replaces the compute/process-spawn parts of
+#    RootManager.kt — see handoff doc "POSIX/OS-level calls" category) ──────
+# No extra crate needed for process spawning: std::process::Command covers it.
+
+# ── ZIP compression/extraction (replaces FileManagerFragment.kt zip logic) ──
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+# ── Regex/text parsing (replaces MultiUserManager.kt / AppUtils.kt parsing) ─
+regex = "1"
+once_cell = "1"
+
+# ── youki_shell_server binary: direct getuid() syscall (replaces the
+#    original Kotlin's `Runtime.exec("id", "-u")` subprocess spawn — a
+#    syscall via the libc crate is both simpler and meaningfully faster
+#    than forking a whole `id` process just to read one integer) ──────────
+libc = "0.2"
+
+# ── Desktop grid occupancy map (replaces DesktopGridPrefs.kt's
+#    CellRect/DesktopOccupancyGrid/PushDirection + LauncherActivity.kt's
+#    pixelToCell/cellToPixel/resolveDrop) ─────────────────────────────────
+# Pinned to 2.14, matching the version already pulled in transitively
+# (via toml_edit/zip's own indexmap dependency, visible in the existing
+# build log) so no second incompatible indexmap version gets resolved into
+# the dependency tree.
+indexmap = "2.14"
+
+[profile.release]
+# Aggressive size + speed optimization for a mobile .so shipped per-ABI.
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+# Keep debug builds fast to iterate; NDK debug .so still usable with a debugger.
+opt-level = 0
+debug = true

@@ -1,0 +1,356 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="ProtectedPermissions,QueryAllPackagesPermission" >
+
+    <!-- ✅ Shizuku -->
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
+
+    <!-- ✅ MaterialFiles — لازمة لرؤية التطبيق وربط خدماته (Package Visibility, Android 11+) -->
+    <queries>
+        <package android:name="me.zhanghai.android.files" />
+    </queries>
+
+    <!-- ✅ صلاحية مخصصة لحماية قناة التواصل بين Youki DEX و MaterialFiles
+         protectionLevel="signature" يعني فقط التطبيقات الموقعة بنفس مفتاح Workshop
+         تقدر ترسل/تستقبل رسائل عبر هذي القناة — أي تطبيق ثالث على الجهاز لا يقدر يتدخل -->
+    <permission
+        android:name="com.youki.dex.permission.DEX_BRIDGE"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.CAPTURE_VIDEO_OUTPUT"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.GET_TASKS" />
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.MANAGE_USERS" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.ACCESS_SUPERUSER" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <!-- ✅ Youki Live Wallpaper Engine (rebuilt) -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <uses-permission android:name="android.permission.BIND_WALLPAPER" />
+
+    <!-- ✅ Widget host support — allows LauncherActivity to host AppWidgets -->
+    <uses-permission android:name="android.permission.BIND_APPWIDGET" />
+    <uses-feature android:name="android.software.live_wallpaper" android:required="false" />
+
+    <application
+        android:name=".App"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:resizeableActivity="true"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@style/AppTheme" >
+        <!--
+            SplashActivity — real app-icon-tap entry point. No boot animation; routes
+            straight to the desktop, or to OnboardingActivity first on any install where
+            onboarding hasn't completed yet. See OnboardingPrefs.isOnboardingComplete.
+        -->
+        <activity
+            android:name=".activities.SplashActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- اختصار سطح المكتب (يظهر بالضغط الطويل على الأيقونة) -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <!--
+            OnboardingActivity — first-run wizard (Welcome → Permissions → Profile →
+            Renderer → Done). SplashActivity/LauncherActivity/MainActivity all
+            redirect here first if OnboardingPrefs.isOnboardingComplete is false.
+        -->
+        <activity
+            android:name=".onboarding.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale" />
+
+        <!--
+            QaSandboxActivity — internal QA self-test host, launched only from
+            Advanced settings → Development tools → "Run self-test" (see
+            AdvancedPreferences.kt). Deliberately runs in its own ":qa" process
+            (android:process below), separate from the app's main process — a
+            crash while probing a screen kills only this isolated process, never
+            the user's live launcher. Not exported: no other app can launch it.
+        -->
+        <activity
+            android:name=".qa.QaSandboxActivity"
+            android:exported="false"
+            android:process=":qa"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale" />
+
+        <!--
+            QaVirtualDisplayHost — the real per-Activity isolation boundary used
+            by QaTestOrchestrator.probeActivity(). Same ":qa" process as
+            QaSandboxActivity above. Requires Root or Shizuku — creates a
+            VirtualDisplay the probed target launches on, so the target
+            never touches the real screen at all (no overlay involved).
+            No fallback: if neither Root nor Shizuku is available, the probe
+            is reported SKIPPED rather than falling back to a visible
+            overlay. See QaVirtualDisplayHost's kdoc for the full
+            isolation/auto-restart model. -->
+        <activity
+            android:name=".qa.QaVirtualDisplayHost"
+            android:exported="false"
+            android:process=":qa"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/AppTheme.OpaqueCover"
+            android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale" />
+
+        <activity
+            android:name=".activities.MainActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale">
+        </activity>
+
+        <!--
+            DesktopOverlayActivity — نفس LauncherActivity لكن بدون HOME category.
+            السبب: Samsung تطرد أي HOME activity يُطلق من اختصار عادي.
+            هذه Activity بدون HOME = تُعامل كـ activity عادية = لا طرد ✅
+        -->
+        <activity
+            android:name=".activities.DesktopOverlayActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:screenOrientation="unspecified"
+            android:theme="@style/AppTheme.Launcher"
+            android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale" />
+        <activity
+            android:name=".activities.LauncherActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale"
+            android:theme="@style/AppTheme.Launcher" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.HOME" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activities.SecondaryLauncherActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@style/AppTheme.Launcher" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.SECONDARY_HOME" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".activities.DebugActivity" android:exported="false" />
+
+        <!-- Easter Egg — مخفية، لا تظهر في الـ recents -->
+        <activity
+            android:name=".activities.EasterEggActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:screenOrientation="unspecified" />
+
+        <!-- Shortcut trampoline — replicates DockTileService.onClick() exactly -->
+        <activity
+            android:name=".activities.ShortcutLauncherActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:taskAffinity=""
+            android:launchMode="singleTask" />
+
+        <!-- ✅ Shizuku Provider -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <service
+            android:name=".services.DockService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" >
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service" />
+        </service>
+        <service
+            android:name=".services.NotificationService"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" >
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".DeviceAdminReceiver"
+            android:exported="false"
+            android:permission="android.permission.BIND_DEVICE_ADMIN" >
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name=".services.DockTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_dock"
+            android:label="Youki DEX"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
+
+        <!-- ✅ Autostart on boot -->
+        <receiver
+            android:name=".receivers.BootReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 📺 Cast — Picker Activity (transparent trampoline to show device chooser dialog) -->
+        <activity
+            android:name=".cast.CastPickerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:taskAffinity=""
+            android:launchMode="singleTask" />
+
+        <!-- 📺 Cast SDK — required metadata for CastContext initialization -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.youki.dex.cast.CastOptionsProvider" />
+
+        <!-- ✅ Youki Live Wallpaper Engine — GL + ExoPlayer wallpaper service -->
+        <!-- FIX ("اصطدت مشكله عند اغلاق الديكس اريد منه ان لا يقتل الخلفيه
+             المتحركه" — closing DEX from the power menu killed the live
+             wallpaper too): PerfectServer's "Close DEX" button calls
+             Process.killProcess(Process.myPid()) as the only reliable way
+             to guarantee every DEX-related component actually stops (see
+             the detailed comment at that call site) — but killProcess()
+             kills the entire OS process, and this wallpaper service was
+             running in that same default app process, so it died right
+             along with everything else. A live wallpaper is a system-bound
+             surface the user explicitly set as their wallpaper (via
+             WallpaperManager), completely independent of whether the DEX
+             desktop itself is open — closing DEX shouldn't blank out the
+             home screen wallpaper underneath it. android:process=":wallpaper"
+             puts this Service in its own separate OS process, so it's the
+             one component genuinely unaffected by killProcess() targeting
+             the main app process's PID. -->
+        <service
+            android:name=".livewallpaper.service.YoukiGLWallpaperService"
+            android:label="@string/lw_service_label"
+            android:permission="android.permission.BIND_WALLPAPER"
+            android:process=":wallpaper"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/live_wallpaper_info" />
+        </service>
+
+        <!-- شاشة المعرض الرئيسية (Gallery Grid) -->
+        <activity
+            android:name=".livewallpaper.ui.gallery.GalleryActivity"
+            android:exported="false"
+            android:label="@string/lw_gallery_title"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <!-- شاشة الحاوية والتخصيص (Editor) -->
+        <activity
+            android:name=".livewallpaper.ui.editor.EditorActivity"
+            android:exported="false"
+            android:label="@string/lw_editor_title"
+            android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <!-- مشغّل فيديو موحّد — يُشغَّل من WorkshopFragment و FileManagerFragment -->
+        <activity
+            android:name=".activities.UnifiedVideoPlayerActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.VideoPlayer"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="unspecified" />
+
+        <!-- شاشة إدارة مصادر الورك شوب -->
+        <activity
+            android:name=".activities.WorkshopSourcesActivity"
+            android:exported="false"
+            android:label="@string/workshop_sources" />
+
+        <!-- FileProvider لمشاركة ملفات الفيديو مع المشغّل الخارجي -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
+
+        <!-- ✅ DexRemoteService — قناة Messenger لاستقبال أحداث من MaterialFiles
+             (مثل: "أضف هذا الملف لسطح المكتب"). exported=true لازم عشان MaterialFiles
+             من عملية (process) ثانية يقدر يربط (bind) عليها، بس محمية بصلاحية signature
+             فلا يقدر أي تطبيق ثالث يتصل بيها إلا لو موقّع بنفس مفتاح Workshop. -->
+        <service
+            android:name=".services.DexRemoteService"
+            android:exported="true"
+            android:permission="com.youki.dex.permission.DEX_BRIDGE" />
+
+    </application>
+
+</manifest>

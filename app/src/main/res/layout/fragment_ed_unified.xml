@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    fragment_ed_unified.xml — the unified scrollable list (Wallpaper Engine style)
+
+    ┌────────────────────────────────────────────────────────────────────────┐
+    │  A full replacement of the tab system (Position / Color) with a single │
+    │  simple, fast vertical list, matching the reference Wallpaper Engine    │
+    │  design:                                                                │
+    │                                                                          │
+    │   - "Alignment" — a single text line showing the current value (e.g.   │
+    │     "Cover"), tapping it opens a choice list (Dialog) instead of 4      │
+    │     separate Chip buttons.                                             │
+    │   - "Background color" — a single color circle on the right instead    │
+    │     of 3 Chips, fixed to black (no white or blue — per an explicit     │
+    │     request).                                                          │
+    │   - Every slider (Brightness/Contrast/Saturation/FPS/Speed) is fully   │
+    │     free with no stepSize at all — stops at any point along the       │
+    │     track, no jumping in fixed increments.                             │
+    │   - The Free Mode section appears/disappears dynamically only when    │
+    │     Free mode is selected, in its natural place within the list       │
+    │     sequence (no separate tab for it).                                │
+    └────────────────────────────────────────────────────────────────────────┘
+-->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/ed_unified_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="32dp">
+
+        <!-- FIX: the "Portrait settings — separate from landscape" badge was
+             removed entirely (an explicit request: "remove the annoying
+             instructions"). The actual separation logic between the two
+             orientations' settings (currentOrientation) in
+             UnifiedEditorFragment.kt keeps working exactly as before — only
+             the message's visual display was removed, not the functionality. -->
+
+        <!-- ═══ General ═══ -->
+        <TextView
+            style="@style/SliderSectionHeader"
+            android:layout_marginBottom="2dp"
+            android:text="@string/lw_section_general" />
+
+        <!-- ── Alignment: a single line, opens a choice list on tap ── -->
+        <LinearLayout
+            android:id="@+id/u_row_alignment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="14dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/lw_alignment"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+            <TextView
+                android:id="@+id/u_alignment_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="Cover" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutlineVariant" />
+
+        <!-- ── Background color: a single line + a fixed color circle (black only) ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="14dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/lw_bg_color"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+            <!-- A circle reflecting the actual current backgroundColor (via a
+                 programmatic tint on the same base shape), and tapping it opens
+                 a full ColorPickerDialog (free RGB/HSV + Hex entry) — see
+                 UnifiedEditorFragment.showBackgroundColorPicker() and
+                 EditorActivity (which implements the ColorPickerDialogListener
+                 required by the library itself). -->
+            <View
+                android:id="@+id/u_bg_color_swatch"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:background="@drawable/swatch_color_black"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackgroundBorderless" />
+
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutlineVariant"
+            android:layout_marginBottom="4dp" />
+
+        <!-- ── The "Enable Color Tuning" switch ──
+             Directly tied to WallpaperConfig.colorCorrectionEnabled, which the
+             Shader itself actually checks (uColorCorrectionEnabled in
+             Shaders.kt) — without it, the three sliders below move visually
+             but have no actual effect on the displayed video, since the
+             Shader ignores them completely when it's false. This feature was
+             missing from the unified list's UI (it wasn't carried over from
+             the old ColorFragment), even though its logic already existed
+             fully and actively in the rendering layer. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="10dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/lw_cc_enable"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/u_switch_color_tuning"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- ── Brightness ── -->
+        <TextView
+            style="@style/SliderLabel"
+            android:text="@string/lw_brightness" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/u_slider_brightness"
+            style="@style/StdSlider"
+            android:valueFrom="0.0" android:valueTo="2.0" android:value="1.0" />
+
+        <!-- ── Contrast ── -->
+        <TextView
+            style="@style/SliderLabel"
+            android:text="@string/lw_contrast" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/u_slider_contrast"
+            style="@style/StdSlider"
+            android:valueFrom="0.0" android:valueTo="2.0" android:value="1.0" />
+
+        <!-- ── Saturation ── -->
+        <TextView
+            style="@style/SliderLabel"
+            android:text="@string/lw_saturation" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/u_slider_saturation"
+            style="@style/StdSlider"
+            android:valueFrom="0.0" android:valueTo="2.0" android:value="1.0" />
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutlineVariant"
+            android:layout_marginTop="8dp" android:layout_marginBottom="4dp" />
+
+        <!-- FIX: the Free Mode hint ("Drag to move - Pinch to zoom - Twist
+             to rotate") was removed entirely (an explicit request: "the last
+             thing that says you're in free mode"). The actual Free mode
+             interaction (FreeGestureOverlay) keeps working with no changes —
+             only the warning text message was deleted. -->
+
+        <!-- ═══ Performance ═══ -->
+        <TextView
+            style="@style/SliderSectionHeader"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="2dp"
+            android:text="@string/lw_performance_section" />
+
+        <!-- FIX (frame throttling removal): the "FPS Limit" section is hidden
+             entirely — rendering is no longer gated by any frame counter; it
+             follows the video's actual frames directly. visibility="gone"
+             instead of deleting it, to avoid touching any other ID in this
+             same file tied to this block. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp"
+            android:visibility="gone">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/lw_fps_limit"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView
+                android:id="@+id/u_fps_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="60 FPS"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textColor="?attr/colorPrimary" />
+        </LinearLayout>
+        <com.google.android.material.slider.Slider
+            android:id="@+id/u_slider_fps"
+            style="@style/StdSlider"
+            android:valueFrom="15" android:valueTo="120" android:value="60"
+            android:visibility="gone" />
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutlineVariant"
+            android:layout_marginTop="12dp" android:layout_marginBottom="4dp"/>
+
+        <!-- ── Playback Speed ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/lw_playback_speed"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView
+                android:id="@+id/u_speed_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1.0x"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textColor="?attr/colorPrimary" />
+        </LinearLayout>
+        <!-- FIX: the same fix, stepSize="0.05" was removed — it used to only
+             allow stopping on exact multiples of 0.05 (1.00, 1.05, 1.10...).
+             Now it's fully free. -->
+        <com.google.android.material.slider.Slider
+            android:id="@+id/u_slider_speed"
+            style="@style/StdSlider"
+            android:valueFrom="0.25" android:valueTo="3.0" android:value="1.0" />
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutlineVariant"
+            android:layout_marginTop="12dp" android:layout_marginBottom="4dp"/>
+
+        <!-- ── Audio pitch ── fully independent from speed, adjusted
+             manually by the user (1.0x = normal, lower = deeper, higher = sharper) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/lw_audio_pitch"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView
+                android:id="@+id/u_pitch_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1.0x"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textColor="?attr/colorPrimary" />
+        </LinearLayout>
+        <com.google.android.material.slider.Slider
+            android:id="@+id/u_slider_pitch"
+            style="@style/StdSlider"
+            android:valueFrom="0.5" android:valueTo="2.0" android:value="1.0" />
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutlineVariant"
+            android:layout_marginTop="12dp" android:layout_marginBottom="4dp"/>
+
+        <!-- ── Mute ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="12dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/lw_muted"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/u_switch_mute"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/u_btn_reset"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/lw_reset"
+            app:icon="@drawable/ic_restart" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

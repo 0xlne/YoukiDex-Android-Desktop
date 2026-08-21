@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Root layout for MainActivity (the settings screen), rebuilt clean and from scratch.
+
+    Fixes the "notch" issue: MainActivity previously used the default AppTheme (no
+    windowNoTitle/windowActionBar override), so AppCompat's system title bar rendered on
+    top with a "Manage permissions" gear as a menu item — that title bar is what showed as
+    an unwanted strip above the real content. MainActivity now uses AppTheme.NoActionBar
+    (see AndroidManifest.xml), so no system title bar renders at all; the permissions
+    action lives on fab_permissions below instead — a small floating action button, not a
+    bar.
+
+    Simple, calm structure on purpose: a plain header row (icon + title text, no collapsing
+    cover-photo mechanics) sitting above the preference list. The whole screen fades and
+    rises in on entrance (see MainActivity.animateSettingsEntrance) for a soft, non-jarring
+    open rather than the plain hard-cut appearance of the original.
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <LinearLayout
+        android:id="@+id/settings_root_column"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <!-- fitsSystemWindows removed: silently ignored once
+             BaseFontScaleActivity opts in to edge-to-edge
+             (setDecorFitsSystemWindows(false) — needed for the caption bar
+             fix), which was letting this header row draw under the status
+             bar/cutout. BaseFontScaleActivity now applies the correct top
+             inset padding to the content root directly, respecting the
+             "Full screen app screens" preference. -->
+
+        <!-- Simple header row — icon + "Youki DEX" title, replacing the old system title
+             bar. Deliberately plain (no cover photo/avatar mechanics) per the "soft,
+             simple, clean" brief. -->
+        <LinearLayout
+            android:id="@+id/settings_header_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="16dp">
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@mipmap/ic_launcher"
+                android:contentDescription="@string/app_name" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="14dp"
+                android:text="@string/app_name"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:textColor="?attr/colorOnSurface" />
+
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/settings_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    </LinearLayout>
+
+    <!-- Floating permissions bubble — replaces the old system title bar's menu gear icon
+         (menu_main.xml's action_grant_permissions, now unused). Same click target
+         (showPermissionsDialog()), relocated into a small floating bubble in the corner. -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_permissions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="@string/manage_permissions"
+        android:src="@drawable/ic_settings"
+        app:elevation="3dp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

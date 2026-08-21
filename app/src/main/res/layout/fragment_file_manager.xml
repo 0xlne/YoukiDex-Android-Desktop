@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- AppBar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/fm_app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:elevation="0dp"
+        app:liftOnScroll="true"
+        app:liftOnScrollTargetViewId="@+id/fm_recycler">
+
+        <com.google.android.material.search.SearchBar
+            android:id="@+id/fm_search_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp"
+            android:hint="@string/search_files_hint"
+            app:navigationIcon="@drawable/ic_search"
+            app:menu="@menu/fm_toolbar_menu"/>
+
+        <HorizontalScrollView
+            android:id="@+id/fm_breadcrumb_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:scrollbars="none"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
+            android:fadeScrollbars="true">
+            <LinearLayout
+                android:id="@+id/fm_breadcrumb"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"/>
+        </HorizontalScrollView>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Main content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <!-- Storage chips -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp">
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/fm_storage_chips"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true"
+                app:selectionRequired="true"/>
+        </HorizontalScrollView>
+
+        <!-- Sort bar -->
+        <LinearLayout
+            android:id="@+id/fm_sort_bar"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="12dp">
+
+            <TextView
+                android:id="@+id/fm_item_count"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/fm_sort_btn"
+                style="@style/Widget.Material3.Button.TextButton.Icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/name"
+                android:textSize="11sp"
+                app:icon="@drawable/ic_sort"
+                app:iconSize="14dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/fm_view_toggle"
+                style="@style/Widget.Material3.Button.TextButton.Icon"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="8dp"
+                app:icon="@drawable/ic_view_list"
+                app:iconSize="18dp"
+                app:iconPadding="0dp"
+                app:iconGravity="textStart"/>
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/colorOutlineVariant"/>
+
+        <!-- ══════════════════════════════════════════════════════════
+             The Multi-Select bar — only shown while selecting
+             ══════════════════════════════════════════════════════════ -->
+        <HorizontalScrollView
+            android:id="@+id/fm_selection_bar"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:scrollbars="none"
+            android:visibility="gone"
+            android:background="?attr/colorSecondaryContainer">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="8dp">
+
+                <!-- Cancel -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fm_sel_cancel"
+                    style="@style/Widget.Material3.Button.TextButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minWidth="0dp"
+                    android:padding="8dp"
+                    app:icon="@drawable/ic_arrow_back"
+                    app:iconSize="18dp"
+                    app:iconPadding="0dp"/>
+
+                <!-- The selected count -->
+                <TextView
+                    android:id="@+id/fm_selection_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/n_selected"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSecondaryContainer"/>
+
+                <View android:layout_width="1dp" android:layout_height="24dp"
+                    android:background="?attr/colorOutlineVariant" android:layout_marginHorizontal="4dp"/>
+
+                <!-- Copy -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fm_sel_copy"
+                    style="@style/Widget.Material3.Button.TextButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minWidth="0dp"
+                    android:padding="8dp"
+                    android:text="@string/copy"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_image"
+                    app:iconSize="16dp"/>
+
+                <!-- Move -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fm_sel_move"
+                    style="@style/Widget.Material3.Button.TextButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minWidth="0dp"
+                    android:padding="8dp"
+                    android:text="@string/move"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_arrow_right"
+                    app:iconSize="16dp"/>
+
+                <!-- Share -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fm_sel_share"
+                    style="@style/Widget.Material3.Button.TextButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minWidth="0dp"
+                    android:padding="8dp"
+                    android:text="@string/share"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_shortcuts"
+                    app:iconSize="16dp"/>
+
+                <!-- Zip compress -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fm_sel_compress"
+                    style="@style/Widget.Material3.Button.TextButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minWidth="0dp"
+                    android:padding="8dp"
+                    android:text="ZIP"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_zip"
+                    app:iconSize="16dp"/>
+
+                <!-- Delete -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fm_sel_delete"
+                    style="@style/Widget.Material3.Button.TextButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minWidth="0dp"
+                    android:padding="8dp"
+                    android:text="@string/delete"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_uninstall"
+                    app:iconSize="16dp"
+                    app:iconTint="@android:color/holo_red_light"/>
+
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Files list -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/fm_swipe_refresh"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/fm_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingBottom="80dp"/>
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+            <LinearLayout
+                android:id="@+id/fm_empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="[ ]"
+                    android:textSize="56sp"/>
+                <TextView
+                    android:id="@+id/fm_empty_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/folder_empty"
+                    android:textSize="16sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+    <!-- FAB -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fm_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:text="@string/new_folder"
+        app:icon="@drawable/ic_create_new_folder"
+        android:visibility="gone"/>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Layout for the folder-picker dialog in FileManagerFragment.showFolderPicker()
+    Required IDs: fp_breadcrumb_scroll, fp_breadcrumb, fp_current_path, fp_recycler
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Breadcrumb scroll -->
+    <HorizontalScrollView
+        android:id="@+id/fp_breadcrumb_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:scrollbars="none"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        android:background="?attr/colorSurfaceVariant">
+
+        <LinearLayout
+            android:id="@+id/fp_breadcrumb"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"/>
+
+    </HorizontalScrollView>
+
+    <!-- The current path -->
+    <TextView
+        android:id="@+id/fp_current_path"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="6dp"
+        android:textSize="11sp"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:maxLines="1"
+        android:ellipsize="start"/>
+
+    <!-- The folders list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/fp_recycler"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:clipToPadding="false"
+        android:paddingVertical="4dp"/>
+
+</LinearLayout>

@@ -1,0 +1,176 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+    <!-- 1. Storage (MANAGE_EXTERNAL_STORAGE) -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_folder" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/storage"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/storage_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_grant_storage"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 2. Device Administrator -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_device_admin" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/device_administrator"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/device_administrator_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_grant_admin"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 3. Write Secure Settings (WRITE_SECURE_SETTINGS) -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_secure_settings" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/write_secure"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/write_secure_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_manage_secure"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 4. Settings Overlays -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_settings" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/overlays_in_settings"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/overlays_in_settings_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_manage_settings_overlays"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 5. Shizuku -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_root" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/shizuku"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/shizuku_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_manage_shizuku"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 6. Root Access -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_root" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/root_access"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/root_access_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_root_access"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 7. Modify System Settings -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_settings" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/write_system_settings"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/write_system_settings_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_write_system_settings"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+    <!-- 9. Read Media (Images & Video) -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:paddingVertical="6dp">
+        <Button style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:clickable="false" app:icon="@drawable/ic_folder" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="8dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/read_media_permission"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/read_media_permission_desc"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:maxLines="2" android:alpha="0.7" />
+        </LinearLayout>
+        <Button app:iconTint="?attr/colorError" android:id="@+id/btn_read_media"
+            style="?attr/materialIconButtonStyle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" app:icon="@drawable/ic_alert" />
+    </LinearLayout>
+
+</LinearLayout>

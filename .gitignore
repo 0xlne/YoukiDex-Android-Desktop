@@ -1,0 +1,16 @@
+local.properties
+secrets.xml
+*.jks
+*.keystore
+
+build/
+app/build/
+.acside/
+.gradle/
+app/rust/youki-engine/target/
+*.log
+*.temp
+.git/
+# Security & Keystore Secrets
+password.md
+*.jks

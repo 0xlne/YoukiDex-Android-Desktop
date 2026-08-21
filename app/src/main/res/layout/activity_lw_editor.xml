@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    activity_lw_editor.xml — نسخة واحدة تحتوي التصميمين الأصليين المستقرين
+    **كاملين وبدون أي تعديل على بنيتهما الداخلية**، والتبديل بينهما يصير حياً
+    وبرمجياً بدل الاعتماد على resource qualifier (layout-land):
+
+    ┌─ ed_portrait_group (GONE افتراضياً بالـ XML، يُظهَر برمجياً) ──────────┐
+    │  البريفيو ملء الشاشة بالكامل + شيت إعدادات يُسحب باليد فوقه.          │
+    │  مطابق حرفياً للتصميم الطولي القديم المستقر — بدون AspectRatio،       │
+    │  بدون نسبة مئوية، لمس مباشر بمساحة كاملة.                             │
+    └──────────────────────────────────────────────────────────────────────┘
+
+    ┌─ ed_landscape_group (GONE افتراضياً بالـ XML، يُظهَر برمجياً) ─────────┐
+    │  شبكة فيديوهات (يسار) | عمود بريفيو match_parent + إعدادات (يمين)     │
+    │  مطابق حرفياً للتصميم العرضي القديم المستقر — بريفيو بعرض العمود      │
+    │  بالكامل، بدون أي قصّ أو نسبة قابلة للتحكم، بدون حواف فارغة.          │
+    └──────────────────────────────────────────────────────────────────────┘
+
+    القرار بينهما: EditorActivity.applyOrientationLayout() يقارن العرض
+    والارتفاع *الفعليين* المتاحين لـ ed_root في هذه اللحظة (وليس
+    Configuration.ORIENTATION ولا عتبة dp ثابتة) — ارتفاع أكبر من العرض =
+    المجموعة الطولية، عرض أكبر من الارتفاع = المجموعة العرضية. بالضبط نفس
+    المعيار الذي يستخدمه أندرويد داخلياً لاختيار layout/ مقابل layout-land/،
+    فقط محسوب حياً حتى يتحدث فوراً مع أي تغيّر حجم نافذة (تقسيم الشاشة، طي
+    الجهاز، تدوير حقيقي) دون إعادة إنشاء الـ Activity.
+
+    FIX (جليتش/تجمد عند فتح المحرر): كل مجموعة كانت تعرّف WallpaperPreviewView
+    خاصة فيها بالـ XML — يعني نسختان GLSurfaceView بشجرة الـ View بنفس الوقت
+    (واحدة GONE بس ما زالت attached، وGONE لا يمنع GLSurfaceView من إنشاء
+    خيط GL + EGL context فعلي فور الإضافة). ed_preview_container_portrait/
+    landscape الآن حاويتان فاضيتان فقط — WallpaperPreviewView واحدة تُنشأ
+    مرة وحدة بـ EditorActivity.onCreate() وتُنقل (reparent) بينهما عبر
+    moveSharedPreviewInto()، فلا يوجد أكثر من سياق GL واحد أبداً.
+
+    لماذا مجموعتان منفصلتان بدل شكل واحد "ذكي" موحّد: التصميمان مختلفان
+    جوهرياً في التفاعل (لمس مباشر ملء الشاشة مقابل تحكم دقيق بعمود ثابت)،
+    وليسا مجرد إعادة ترتيب لنفس العناصر — دمجهما في هيكل واحد بأوزان متغيرة
+    هو ما تسبب سابقاً بمشاكل القياس/التوقيت (glitches) عند كل تبديل.
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/ed_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         ed_portrait_group — التصميم الطولي: بريفيو ملء الشاشة + شيت يُسحب
+         ══════════════════════════════════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/ed_portrait_group"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <!-- ═══ حاوية البريفيو — تملأ الشاشة بالكامل، خلف كل شيء.
+             فاضية بالـ XML عمداً: EditorActivity تنشئ WallpaperPreviewView
+             واحدة فقط برمجياً وتنقلها بين هذه الحاوية وحاوية Landscape
+             المقابلة (بدل نسختين ثابتتين بالـ XML) — انظر moveSharedPreviewInto()
+             بالكود لشرح كامل لماذا. ═══ -->
+        <FrameLayout
+            android:id="@+id/ed_preview_container_portrait"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- شفافة تماماً، تلتقط Pan/Pinch/Rotate فقط أثناء وضع Free 🆓
+             تغطي الشاشة كاملة (match_parent حقيقي) -->
+        <com.youki.dex.livewallpaper.ui.editor.FreeGestureOverlay
+            android:id="@+id/ed_free_gesture_overlay_portrait"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/ed_free_hint_portrait"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="#80000000"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="13sp"
+            android:text="@string/lw_free_hint"
+            android:visibility="gone" />
+
+        <!-- ═══ Toolbar شفاف يطفو فوق البريفيو ═══ -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/ed_toolbar_portrait"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:layout_gravity="top"
+            android:background="@drawable/bg_editor_toolbar_fade"
+            app:title="@string/lw_editor_title"
+            app:titleTextColor="@android:color/white"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@android:color/white" />
+
+        <!-- ═══ شيت الإعدادات — سحب حر يدوي (لا BottomSheetBehavior) ═══
+             translationY يُحدَّث يدوياً 1:1 مع الإصبع في
+             EditorActivity.setupBottomSheet() — انظر التوثيق هناك. -->
+        <LinearLayout
+            android:id="@+id/ed_sheet"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="bottom"
+            android:orientation="vertical"
+            android:background="@drawable/bg_editor_sheet">
+
+            <FrameLayout
+                android:id="@+id/ed_drag_handle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="14dp"
+                android:clickable="true"
+                android:focusable="true">
+                <View
+                    android:layout_width="36dp"
+                    android:layout_height="4dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/shape_drag_handle" />
+            </FrameLayout>
+
+            <!-- بدون android:name عمداً — الفرجمنت يُضاف برمجياً فقط
+                 بالمجموعة الفعّالة حالياً (انظر EditorActivity.bindPortraitGroup)،
+                 لتفادي إنشاء نسختين من UnifiedEditorFragment تعملان معاً
+                 بالخلفية في آنٍ واحد (وهو ما كان يسبب سلوكاً غير متوقع عند
+                 دمج التصميمين بملف XML واحد). -->
+            <FrameLayout
+                android:id="@+id/ed_unified_fragment_portrait"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+        </LinearLayout>
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/ed_fab_apply_portrait"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="12dp"
+            android:text="@string/lw_apply"
+            app:icon="@drawable/ic_check_circle" />
+
+    </FrameLayout>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         ed_landscape_group — التصميم العرضي: شبكة فيديوهات | بريفيو+إعدادات
+         ══════════════════════════════════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/ed_landscape_group"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <!-- ═══ العمود الأيسر: شبكة الفيديوهات — مرنة، عدد الأعمدة
+                 يُحسب ديناميكياً حسب العرض الفعلي المتاح (انظر
+                 setupLandscapeVideoGrid في EditorActivity)، بلا حواف
+                 فارغة ثابتة. الوزن 0.42 هو نقطة انطلاق فقط، وليس قيداً
+                 صارماً على المحتوى داخلها. ═══ -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/ed_land_video_grid"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.42"
+                android:clipToPadding="false"
+                android:paddingBottom="12dp"
+                android:padding="6dp"
+                android:background="?attr/colorSurface" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="?attr/colorOutlineVariant" />
+
+            <!-- ═══ العمود الأيمن: بريفيو بعرض العمود بالكامل + إعدادات ═══ -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.58"
+                android:orientation="vertical">
+
+                <!-- حاوية المعاينة — عرضها = عرض العمود بالكامل (match_parent
+                     حقيقي، بدون أي نسبة مئوية تقصّه وبدون حواف فارغة)،
+                     وارتفاعها يُحسب تلقائياً = العرض × 9/16 عبر
+                     AspectRatioFrameLayout.onMeasure. -->
+                <com.youki.dex.livewallpaper.ui.editor.AspectRatioFrameLayout
+                    android:id="@+id/ed_preview_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/black">
+
+                    <!-- فاضية بالـ XML عمداً — نفس سبب ed_preview_container_portrait أعلى:
+                         WallpaperPreviewView واحدة مشتركة تُنقل هنا برمجياً بدل نسخة ثابتة ثانية. -->
+                    <FrameLayout
+                        android:id="@+id/ed_preview_container_landscape"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                    <com.youki.dex.livewallpaper.ui.editor.FreeGestureOverlay
+                        android:id="@+id/ed_free_gesture_overlay_landscape"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/ed_free_hint_landscape"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:background="#80000000"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="8dp"
+                        android:textColor="@android:color/white"
+                        android:textSize="13sp"
+                        android:text="@string/lw_free_hint"
+                        android:visibility="gone" />
+
+                </com.youki.dex.livewallpaper.ui.editor.AspectRatioFrameLayout>
+
+                <!-- ═══ قائمة الإعدادات — تملأ ما تبقى أسفل المعاينة،
+                     تمرير عمودي حر، ثابتة بلا سحب (المساحة كافية) ═══ -->
+                <!-- بدون android:name عمداً — نفس السبب الموثّق أعلى
+                     ed_unified_fragment_portrait: إضافة الفرجمنت برمجياً
+                     فقط بالمجموعة الفعّالة. -->
+                <FrameLayout
+                    android:id="@+id/ed_unified_fragment_landscape"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="?android:attr/colorBackground" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- ═══ Toolbar شفاف يطفو فوق العمودين معاً ═══ -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/ed_toolbar_landscape"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@drawable/bg_editor_toolbar_fade"
+            app:title="@string/lw_editor_title"
+            app:titleTextColor="@android:color/white"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@android:color/white"
+            android:elevation="4dp" />
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/ed_fab_apply_landscape"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="16dp"
+            android:text="@string/lw_apply"
+            app:icon="@drawable/ic_check_circle" />
+
+    </FrameLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

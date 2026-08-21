@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    vp_play_btn_bg.xml — AnimatedStateListDrawable
+    state_activated=true  → دائرة (شغال)
+    state_activated=false → مربع مدور (موقوف)
+    الانيميشن يحدث عند التنقل بين الحالتين
+-->
+<animated-selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- حالة التشغيل: دائرة بـ primaryContainer -->
+    <item
+        android:id="@+id/state_playing"
+        android:drawable="@drawable/vp_play_shape_circle"
+        android:state_activated="true" />
+
+    <!-- حالة الإيقاف: مربع مدور بـ tertiaryContainer -->
+    <item
+        android:id="@+id/state_paused"
+        android:drawable="@drawable/vp_play_shape_square"
+        android:state_activated="false" />
+
+    <!-- تشغيل → إيقاف: دائرة → مربع -->
+    <transition
+        android:fromId="@id/state_playing"
+        android:toId="@id/state_paused">
+        <animation-list>
+            <item android:drawable="@drawable/vp_play_shape_circle" android:duration="280" />
+            <item android:drawable="@drawable/vp_play_shape_square" android:duration="1" />
+        </animation-list>
+    </transition>
+
+    <!-- إيقاف → تشغيل: مربع → دائرة -->
+    <transition
+        android:fromId="@id/state_paused"
+        android:toId="@id/state_playing">
+        <animation-list>
+            <item android:drawable="@drawable/vp_play_shape_square" android:duration="280" />
+            <item android:drawable="@drawable/vp_play_shape_circle" android:duration="1" />
+        </animation-list>
+    </transition>
+
+</animated-selector>

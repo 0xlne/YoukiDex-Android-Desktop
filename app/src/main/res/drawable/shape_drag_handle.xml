@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    شكل بسيط لمقبض السحب أعلى Bottom Sheet — قضيب أفقي رفيع منحني الأطراف،
+    نفس الشكل القياسي المعروف بتطبيقات مثل Wallpaper Engine لتأشير
+    "هذا القسم قابل للسحب لأعلى/أسفل".
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#80FFFFFF" />
+    <corners android:radius="2dp" />
+    <size
+        android:width="36dp"
+        android:height="4dp" />
+</shape>

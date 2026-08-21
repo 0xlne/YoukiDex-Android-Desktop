@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    🔧 FIX (مشكلة ٤): إزالة المسافة الفارغة للأيقونة في كل الـ Preferences
+    بدون هذا، الـ Preferences اللي ما عندها icon تحجز مسافة فارغة
+    جنب الـ Preferences اللي عندها icon — يعطي مظهر غير منظم
+    
+    values-sw360dp يطبّق هذا فقط على الشاشات الكبيرة (360dp+)
+    هذا الملف يضمن التطبيق على كل الشاشات
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <bool name="config_materialPreferenceIconSpaceReserved"
+        tools:ignore="MissingDefaultResource,PrivateResource">false</bool>
+</resources>

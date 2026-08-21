@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    item_user_switcher.xml — redesigned
+    - A circular ShapeableImageView + stroke
+    - The name + ID in a column
+    - A green dot for the active user
+    - 50dp height — more comfortable to tap
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/popup_item_bg"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:layout_marginBottom="4dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- ── The user's photo ── -->
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/switcher_item_avatar"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:src="@drawable/ic_user"
+        android:scaleType="centerCrop"
+        app:shapeAppearance="?attr/shapeAppearanceCornerFull"
+        app:strokeWidth="1.5dp"
+        app:strokeColor="#2CFFFFFF" />
+
+    <!-- ── The name + ID ── -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="11dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/switcher_item_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="User"
+            android:textColor="#E8FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="normal"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/switcher_item_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ID: 0"
+            android:textColor="#66FFFFFF"
+            android:textSize="10sp"
+            android:layout_marginTop="1dp" />
+    </LinearLayout>
+
+    <!-- ── The activity indicator (a green dot) ── -->
+    <View
+        android:id="@+id/switcher_item_active_dot"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:background="@drawable/badge_green"
+        android:visibility="gone" />
+
+</LinearLayout>

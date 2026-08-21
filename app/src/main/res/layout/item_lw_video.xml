@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="6dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="2dp">
+
+    <com.youki.dex.livewallpaper.ui.editor.AspectRatioFrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/lw_item_thumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:background="?attr/colorSurfaceVariant" />
+
+        <!-- A light gradient at the bottom of the card so the name reads clearly -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/gradient_card_bottom" />
+
+        <TextView
+            android:id="@+id/lw_item_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:padding="10dp"
+            android:textColor="@android:color/white"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="my_wallpaper_video" />
+
+        <!-- The "Active" badge -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/lw_item_active_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="8dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="?attr/colorPrimary"
+            app:cardCornerRadius="20dp">
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:padding="3dp"
+                android:src="@drawable/ic_check_circle"
+                app:tint="@android:color/white" />
+        </com.google.android.material.card.MaterialCardView>
+
+    </com.youki.dex.livewallpaper.ui.editor.AspectRatioFrameLayout>
+</com.google.android.material.card.MaterialCardView>
