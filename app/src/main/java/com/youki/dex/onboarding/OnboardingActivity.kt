@@ -41,7 +41,6 @@ class OnboardingActivity : AppCompatActivity() {
         { OnboardingWelcomeFragment() },
         { OnboardingPermissionsFragment() },
         { OnboardingProfileFragment() },
-        { OnboardingRendererChoiceFragment() },
         { OnboardingDoneFragment() }
     )
 

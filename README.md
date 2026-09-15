@@ -1,3 +1,5 @@
+> ⚠️ **Development on this project has been discontinued.** This repo is archived — no further updates, but everything below still describes it accurately.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/mrYouki/YoukiDex-Android-Desktop/main/app/src/main/ic_launcher-playstore.png" width="100" alt="YoukiDEX Logo"/>
 </p>

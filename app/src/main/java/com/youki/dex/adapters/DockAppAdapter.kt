@@ -186,17 +186,55 @@ class DockAppAdapter(
         var runningIndicator: View = itemView.findViewById(R.id.running_indicator)
 
         fun bind(app: DockApp, listener: OnDockAppClickListener) {
-            itemView.setOnClickListener { view -> listener.onDockAppClicked(app, view) }
+            // Discord request ("double click with a bluetooth mouse? Will
+            // it work? double click to open an app, not only one click"):
+            // opt-in via "require_double_click_apps" (default false) — most
+            // users are on direct touch, where requiring a double-tap to
+            // open anything would be a regression, not an improvement. When
+            // enabled, a single click intentionally does nothing (not a
+            // half-open/preview state) — a single-click no-op is a clear,
+            // learnable behavior; anything else (highlight-then-open,
+            // partial animation) would need its own separate design pass
+            // this fix isn't attempting.
+            val prefs = PreferenceManager.getDefaultSharedPreferences(itemView.context)
+            if (prefs.getBoolean("require_double_click_apps", false)) {
+                val gestureDetector = android.view.GestureDetector(
+                    itemView.context,
+                    object : android.view.GestureDetector.SimpleOnGestureListener() {
+                        override fun onDoubleTap(e: MotionEvent): Boolean {
+                            listener.onDockAppClicked(app, itemView)
+                            return true
+                        }
+                    }
+                )
+                itemView.setOnClickListener(null)
+                itemView.setOnTouchListener { view, event ->
+                    // Secondary (right-click) still takes priority, same as
+                    // the plain-click path below — checked first so a
+                    // right-click on a double-click-enabled icon still opens
+                    // the context menu immediately rather than requiring a
+                    // second right-click to satisfy the gesture detector.
+                    if (event.buttonState == MotionEvent.BUTTON_SECONDARY) {
+                        listener.onDockAppLongClicked(app, view)
+                        return@setOnTouchListener true
+                    }
+                    gestureDetector.onTouchEvent(event)
+                    view.performClick() // keeps accessibility services (TalkBack) informed a click target exists here
+                    true
+                }
+            } else {
+                itemView.setOnClickListener { view -> listener.onDockAppClicked(app, view) }
+                itemView.setOnTouchListener { view, event ->
+                    if (event.buttonState == MotionEvent.BUTTON_SECONDARY) {
+                        listener.onDockAppLongClicked(app, view)
+                        return@setOnTouchListener true
+                    }
+                    false
+                }
+            }
             itemView.setOnLongClickListener { view ->
                 listener.onDockAppLongClicked(app, view)
                 true
-            }
-            itemView.setOnTouchListener { view, event ->
-                if (event.buttonState == MotionEvent.BUTTON_SECONDARY) {
-                    listener.onDockAppLongClicked(app, view)
-                    return@setOnTouchListener true
-                }
-                false
             }
         }
     }

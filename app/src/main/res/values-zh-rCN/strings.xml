@@ -395,7 +395,6 @@
     <string name="lw_orientation_portrait">竖屏设置 — 与横屏分开</string>
     <string name="skip">跳过</string>
     <string name="shizuku_desc">Shizuku 无需无线 ADB 即可授予特权 Shell 访问权限。请从 Play 商店安装 Shizuku，通过 ADB 或无线调试运行一次，然后在此处授予权限。</string>
-    <string name="file_manager">文件管理器</string>
     <string name="copy_report">复制报告</string>
     <string name="delete_user_confirm">删除“%1$s”？\n其所有数据将被永久清除。</string>
     <string name="sound_applied">声音已应用 ✓</string>
@@ -426,7 +425,6 @@
     <string name="requires_shizuku_or_root_manage_accounts">此选项需要 Shizuku 或 Root 权限\n才能管理此设备上的账户</string>
     <string name="perf_thermal_title">温度模式</string>
     <string name="sound_copy_failed">复制音频文件失败</string>
-    <string name="lw_fps_limit">FPS 限制</string>
     <string name="renamed_successfully">重命名成功</string>
     <string name="without_permissions">无权限</string>
     <string name="open">打开</string>
@@ -861,13 +859,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">欢迎使用 Youki DEX</string>
     <string name="onboarding_welcome_body">让我们来设置你的桌面吧，只需一分钟。</string>
-    <string name="onboarding_renderer_title">选择渲染引擎</string>
-    <string name="onboarding_renderer_description">Vulkan 更新，在某些设备上可能更快，但并非所有设备都能同等受益——支持质量因设备而异。OpenGL ES 是一个安全、兼容性好的选择，几乎在所有设备上都能良好运行。你可以随时在高级设置中更改此设置。</string>
-    <string name="onboarding_renderer_auto">自动</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">目前无法获取渲染引擎信息</string>
-    <string name="onboarding_renderer_change_later_note">你可以随时在高级设置中更改此设置。</string>
     <string name="onboarding_permissions_title">还有一件事</string>
     <string name="onboarding_permissions_body">授予 Shizuku 权限可让桌面直接启动，无需额外提示。你可以跳过此步骤，稍后在设置中授予权限。</string>
     <string name="onboarding_skip_warning">如果不设置此项，桌面每次需要权限时都会以常规方式请求——这完全没问题，只是流程不同而已。</string>

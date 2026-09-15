@@ -1,10 +1,7 @@
 package com.youki.dex.cast
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import androidx.mediarouter.app.MediaRouteChooserDialog
-import com.google.android.gms.cast.framework.CastButtonFactory
-
 /**
  * CastPickerActivity
  *

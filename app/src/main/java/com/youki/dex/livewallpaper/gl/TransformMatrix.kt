@@ -109,7 +109,7 @@ object TransformMatrix {
             // scaleX/scaleY from COVER are the base (aspect correction only), free.scaleX/Y is multiplied in exactly once here
             val sx = scaleX * free.scaleX * flipX
             val sy = scaleY * free.scaleY * flipY
-            // FIX (inverted response): free.rotationDeg is computed in the screen's
+            // Resolved issue: inverted response. free.rotationDeg is computed in the screen's
             // touch coordinates, where +Y = downward (see currentAngle() in
             // FreeGestureOverlay, where a positive angle = clockwise as the user
             // actually sees it with their own eyes). But this space here is OpenGL

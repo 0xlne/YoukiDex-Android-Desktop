@@ -113,7 +113,7 @@ class EasterEggActivity : Activity(), SurfaceHolder.Callback {
         val imageView   = findViewById<ImageView>(R.id.egg_image)
         val noMediaTv   = findViewById<TextView>(R.id.egg_no_media_tv)
         val hintTv      = findViewById<TextView>(R.id.egg_hint_tv)
-        // FIX (hardcoded Arabic text): this text used to be fixed Arabic regardless
+        // hardcoded Arabic text — fixed below: this text used to be fixed Arabic regardless
         // of the device/app language. Now it's read from strings.xml
         // (swipe_left_right_to_exit), so it's translated automatically based on
         // the current language, just like the rest of the UI text.

@@ -130,9 +130,15 @@ class AppearancePreferences : PreferenceFragmentCompat() {
                 slider.isTickVisible = false
                 slider.labelBehavior = com.google.android.material.slider.LabelFormatter.LABEL_GONE
                 slider.stepSize = 1f
-                slider.value = dockAlphaPref.sharedPreferences?.getString("dock_background_alpha", "255")?.toFloatOrNull() ?: 255f
+                // Bounds set before value, then clamped — see the fix note
+                // on dock_height in DockPreferences.kt for why this order
+                // matters (crash if a stored value ever falls outside the
+                // range in effect when it's assigned).
                 slider.valueFrom = 0f
                 slider.valueTo = 255f
+                slider.value =
+                    (dockAlphaPref.sharedPreferences?.getString("dock_background_alpha", "255")?.toFloatOrNull() ?: 255f)
+                        .coerceIn(slider.valueFrom, slider.valueTo)
                 slider.addOnChangeListener { _, value, _ ->
                     dockAlphaPref.sharedPreferences?.edit { putString("dock_background_alpha", value.toInt().toString()) }
                 }
@@ -147,9 +153,13 @@ class AppearancePreferences : PreferenceFragmentCompat() {
                 slider.isTickVisible = false
                 slider.labelBehavior = LabelFormatter.LABEL_GONE
                 slider.stepSize = 1f
-                slider.value = iconPaddingPref.sharedPreferences?.getString("icon_padding", "5")?.toFloatOrNull() ?: 5f
+                // Bounds set before value, then clamped — see the fix note
+                // on dock_height in DockPreferences.kt.
                 slider.valueFrom = 0f
                 slider.valueTo = 20f
+                slider.value =
+                    (iconPaddingPref.sharedPreferences?.getString("icon_padding", "5")?.toFloatOrNull() ?: 5f)
+                        .coerceIn(slider.valueFrom, slider.valueTo)
                 slider.addOnChangeListener { _, value, _ ->
                     iconPaddingPref.sharedPreferences?.edit { putString("icon_padding", value.toInt().toString()) }
                 }

@@ -1,6 +1,5 @@
 package com.youki.dex.fragments
 
-import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle

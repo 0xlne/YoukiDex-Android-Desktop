@@ -184,26 +184,6 @@
             android:title="@string/restore_preferences" />
     </PreferenceCategory>
 
-
-    <PreferenceCategory
-        android:key="renderer_category"
-        android:title="@string/renderer_category_title">
-
-        <ListPreference
-            android:key="renderer_backend"
-            android:title="@string/onboarding_renderer_title"
-            android:summary="@string/renderer_backend_summary"
-            android:entries="@array/renderer_backend_entries"
-            android:entryValues="@array/renderer_backend_values"
-            android:defaultValue="AUTO" />
-
-        <Preference
-            android:key="renderer_vulkan_info"
-            android:title="@string/renderer_vulkan_info_title"
-            android:selectable="false" />
-
-    </PreferenceCategory>
-
     <PreferenceCategory
         android:key="editor_category"
         android:title="@string/editor_category_title">
@@ -251,6 +231,22 @@
         <Preference
             android:key="share_display_info"
             android:title="@string/share_display_info"/>
+
+    </PreferenceCategory>
+
+    <!-- OTG / UHID mode — phone acts as USB keyboard+mouse for a connected PC -->
+    <PreferenceCategory android:title="@string/uhid_category_title">
+
+        <SwitchPreferenceCompat
+            android:key="uhid_mode_enabled"
+            android:title="@string/uhid_mode_title"
+            android:summary="@string/uhid_mode_summary"
+            android:defaultValue="false" />
+
+        <Preference
+            android:key="uhid_open_trackpad"
+            android:title="@string/uhid_open_trackpad"
+            android:summary="@string/uhid_open_trackpad_summary" />
 
     </PreferenceCategory>
 

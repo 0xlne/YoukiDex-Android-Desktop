@@ -31,11 +31,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.youki.dex.services.DockService
-import java.io.BufferedReader
 import java.io.DataOutputStream
 import java.io.File
 import java.io.IOException
-import java.io.InputStreamReader
 import android.os.UserManager
 import androidx.core.net.toUri
 
@@ -307,7 +305,7 @@ object DeviceUtils {
                     prepareAsync() // ← async: does not block the UI thread
                 }
             } catch (setupError: Exception) {
-                // FIX (Memory Leak): if setDataSource or any setup before
+                // Fix for Memory Leak: if setDataSource or any setup before
                 // prepareAsync() threw an exception (a corrupt file, an
                 // unsupported format...), mp was already inside activePlayers
                 // and no listener had fired yet to remove and release it — it
@@ -330,7 +328,7 @@ object DeviceUtils {
             Log.e("YoukiDex", "putSystemSetting failed [$key]: ${e.message}")
             false
         } catch (e: IllegalArgumentException) {
-            // FIX (full app crash): modern Android rejects any key not on the
+            // Fix for full app crash: modern Android rejects any key not on the
             // Settings.System allowlist by throwing an IllegalArgumentException
             // ("You cannot keep your settings in the secure settings") instead
             // of the previously expected SecurityException only. Without this
@@ -404,6 +402,25 @@ object DeviceUtils {
         return result
     }
 
+    // FIX: getNavBarHeight was flaky on Android 15+ — "sometimes the dock
+    // shows fully, sometimes part of it is cut off under the gesture area"
+    // (user report). Root cause: the WindowInsets query below can transiently
+    // return 0 or throw (called before the window's insets have settled,
+    // called from a context whose WindowManager isn't fully attached yet,
+    // etc.), and the old code treated that failure identically to "this
+    // device genuinely has a 0px nav bar" — falling back to the `dimen`
+    // lookup, which the comment below already documents as ALWAYS wrong
+    // (returns 0) on 15+ gesture nav. So a single flaky call at the wrong
+    // moment made the dock believe it had the full screen height available
+    // and undershoot the gesture-area clearance for that layout pass.
+    // Caching the last known-good non-zero reading and preferring it over
+    // the 0px `dimen` fallback (only on 15+, only when the live query
+    // itself failed) turns "one bad reading breaks this layout pass" into
+    // "one bad reading reuses the last good one" — self-healing the moment
+    // any later call succeeds, since the cache keeps updating.
+    @Volatile
+    private var lastKnownNavBarHeight: Int = 0
+
     @SuppressLint("DiscouragedApi", "InternalInsetResource")
     fun getNavBarHeight(context: Context): Int {
         // On Android 15+ with gesture navigation, navigation_bar_height dimen returns 0
@@ -411,13 +428,32 @@ object DeviceUtils {
         // draw UNDER the gesture area, blocking touches. Use WindowInsets to get the real value.
         if (android.os.Build.VERSION.SDK_INT >= 35) {
             try {
+                // getSystemService(Class) is nullable by its own official
+                // signature (<T> getSystemService(Class<T>): T?) — was
+                // being force-used here with no null check at all. Caught
+                // implicitly by the surrounding try/catch as an NPE before
+                // (Kotlin/Android NPEs are still Exceptions), so this
+                // wasn't a live crash, but it silently fell straight
+                // through to the stale-reading fallback below on every
+                // call where the service happened to come back null,
+                // which is exactly the kind of hidden failure mode this
+                // whole fix is about closing — make it explicit instead of
+                // relying on exception-catching to paper over a null.
                 val wm = context.getSystemService(android.view.WindowManager::class.java)
-                val metrics = wm.currentWindowMetrics
-                val insets = metrics.windowInsets.getInsets(
+                val metrics = wm?.currentWindowMetrics
+                val insets = metrics?.windowInsets?.getInsets(
                     android.view.WindowInsets.Type.navigationBars()
                 )
-                if (insets.bottom > 0) return insets.bottom
+                if (insets != null && insets.bottom > 0) {
+                    lastKnownNavBarHeight = insets.bottom
+                    return insets.bottom
+                }
             } catch (e: Exception) {}
+            // Query failed or returned 0 this time — on 15+ that's the flaky
+            // case described above, not necessarily "no nav bar", so prefer
+            // the last good reading over the dimen fallback that's known to
+            // always read 0 here.
+            if (lastKnownNavBarHeight > 0) return lastKnownNavBarHeight
         }
         var result = 0
         val resourceId =
@@ -508,9 +544,33 @@ object DeviceUtils {
         return dm.getDisplays(category)
     }
 
+    /**
+     * GitHub issue #15 ("The wallpaper on the secondary screen is not
+     * working! only on my cell phone" / general secondary-display detection
+     * complaints — Portable Touch Monitor via USB-C/HDMI cable): this used
+     * to only look at DisplayManager.DISPLAY_CATEGORY_PRESENTATION. That
+     * category is NOT a general "all connected external displays" list —
+     * it's a narrower platform classification that, depending on the OEM/
+     * ROM/Android version, some real wired external monitors (USB-C-to-HDMI
+     * portable touch monitors in particular) simply never get added to,
+     * even though the same display shows up fine in the plain getDisplays()
+     * list and DisplayManager clearly knows about it. When that category
+     * came back empty, getSecondaryDisplay() returned null — the app
+     * behaved as if no secondary display existed at all, even with a cable
+     * plugged in and a monitor lit up, which is the "app doesn't create a
+     * screen or a preview for a new screen" behavior being reported.
+     *
+     * Fix: fall back to scanning every currently-known display
+     * (DisplayManager.getDisplays(), unfiltered) and pick the first one
+     * that isn't the built-in default display, if the PRESENTATION-category
+     * query comes back empty. This catches externally connected displays
+     * that Android tracks but doesn't classify as "presentation" displays.
+     */
     fun getSecondaryDisplay(context: Context): Display? {
-        val displays = getDisplays(context, DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
-        return if (displays.isNotEmpty()) displays[0] else null
+        val presentationDisplays = getDisplays(context, DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+        if (presentationDisplays.isNotEmpty()) return presentationDisplays[0]
+
+        return getDisplays(context).firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
     }
 
     /**
@@ -693,12 +753,54 @@ object DeviceUtils {
             context, Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
 
+    /**
+     * FIX (Discord report — "the button does nothing"): once a runtime
+     * permission (POST_NOTIFICATIONS, BLUETOOTH_CONNECT/SCAN,
+     * READ_MEDIA_IMAGES/VIDEO) has been denied with "Don't ask again" (or
+     * denied twice on newer Android versions), the system silently refuses
+     * to show the permission dialog again — ActivityCompat.requestPermissions
+     * just immediately calls back as denied with no UI at all. From the
+     * user's side that looks exactly like "I tapped Grant and nothing
+     * happened".
+     *
+     * shouldShowRequestPermissionRationale() alone can't tell "never asked
+     * yet" apart from "permanently denied" — it returns false for BOTH. So
+     * we track our own "have we ever asked for this one" flag in prefs:
+     * the very first time, we go ahead and call requestPermissions (rationale
+     * being false is expected and fine here). On any later call, if it's
+     * still not granted and rationale is (still) false, that combination
+     * can only mean permanently denied — so route to the app's own System
+     * Settings → Permissions page instead, the only place left that can
+     * actually grant it.
+     */
+    private fun requestRuntimePermissionOrOpenSettings(
+        activity: Activity, permissions: Array<String>, requestCode: Int, prefsKey: String
+    ) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
+        val alreadyAsked = prefs.getBoolean(prefsKey, false)
+        val allGranted = permissions.all {
+            ContextCompat.checkSelfPermission(activity, it) == PackageManager.PERMISSION_GRANTED
+        }
+        val canShowRationale = permissions.any {
+            ActivityCompat.shouldShowRequestPermissionRationale(activity, it)
+        }
+        if (alreadyAsked && !allGranted && !canShowRationale) {
+            activity.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = ("package:" + activity.packageName).toUri()
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
+            return
+        }
+        prefs.edit().putBoolean(prefsKey, true).apply()
+        ActivityCompat.requestPermissions(activity, permissions, requestCode)
+    }
+
     fun requestPostNotifications(activity: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.requestPermissions(
-                activity,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                42
+            requestRuntimePermissionOrOpenSettings(
+                activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 42, "asked_post_notifications"
             )
         }
     }
@@ -712,13 +814,10 @@ object DeviceUtils {
 
     fun requestBluetoothPermissions(activity: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ActivityCompat.requestPermissions(
+            requestRuntimePermissionOrOpenSettings(
                 activity,
-                arrayOf(
-                    Manifest.permission.BLUETOOTH_CONNECT,
-                    Manifest.permission.BLUETOOTH_SCAN
-                ),
-                43
+                arrayOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN),
+                43, "asked_bluetooth"
             )
         }
     }
@@ -747,19 +846,14 @@ object DeviceUtils {
 
     fun requestReadMediaPermissions(activity: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.requestPermissions(
+            requestRuntimePermissionOrOpenSettings(
                 activity,
-                arrayOf(
-                    Manifest.permission.READ_MEDIA_IMAGES,
-                    Manifest.permission.READ_MEDIA_VIDEO
-                ),
-                44
+                arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO),
+                44, "asked_read_media"
             )
         } else {
-            ActivityCompat.requestPermissions(
-                activity,
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                44
+            requestRuntimePermissionOrOpenSettings(
+                activity, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 44, "asked_read_media"
             )
         }
     }

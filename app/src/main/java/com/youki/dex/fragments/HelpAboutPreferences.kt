@@ -1,7 +1,6 @@
 package com.youki.dex.fragments
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,6 +13,7 @@ import androidx.preference.PreferenceManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.youki.dex.R
 import com.youki.dex.activities.EasterEggActivity
+import com.youki.dex.utils.AppUtils
 
 /**
  * About screen — redesigned as a plain Fragment with a real custom layout
@@ -43,10 +43,10 @@ class HelpAboutPreferences : Fragment(R.layout.fragment_help_about) {
         devUnlocked = prefs.getBoolean("developer_mode_enabled", false)
 
         view.findViewById<View>(R.id.row_github).setOnClickListener {
-            openUrl("https://github.com/mrYouki/YoukiDex-Android-Desktop")
+            AppUtils.openUrl(requireContext(), "https://github.com/mrYouki/YoukiDex-Android-Desktop")
         }
         view.findViewById<View>(R.id.row_discord).setOnClickListener {
-            openUrl("https://discord.gg/mKkaMxd5M2")
+            AppUtils.openUrl(requireContext(), "https://discord.gg/mKkaMxd5M2")
         }
 
         // Tapping the app identity card (icon + name + tagline): a small
@@ -228,7 +228,4 @@ class HelpAboutPreferences : Fragment(R.layout.fragment_help_about) {
         // fade-in transition
         requireActivity().overridePendingTransition(R.anim.fade_in, 0)
     }
-
-    private fun openUrl(url: String) =
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 }

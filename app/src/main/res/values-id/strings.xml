@@ -145,7 +145,6 @@
     <string name="lw_active_badge">Aktif</string>
     <string name="cannot_read_zip">Tidak dapat membaca ZIP: %1$s</string>
     <string name="tweak_connectivity_title">Mode konektivitas cepat</string>
-    <string name="lw_fps_limit">Batas FPS</string>
     <string name="device_admin_already_enabled">%1$s diaktifkan</string>
     <string name="dock_activation_area_summary">Tinggi area aktivasi tak terlihat di bagian bawah layar</string>
     <string name="bubble_mode_material_u">Material You (Gelap)</string>
@@ -434,7 +433,6 @@
     <string name="permission_write_settings_required">Berikan WRITE_SETTINGS terlebih dahulu melalui Shizuku</string>
     <string name="lw_tab_performance">Performa</string>
     <string name="tap_to_see_the_list_of_great_p">Ketuk untuk melihat daftar orang-orang hebat yang telah berkontribusi pada Youki DEX</string>
-    <string name="file_manager">Pengelola file</string>
     <string name="lw_add_video">Tambahkan video</string>
     <string name="write_secure">Tulis pengaturan aman</string>
     <string name="custom_display_size_hint">biarkan kosong untuk default</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Selamat datang di Youki DEX</string>
     <string name="onboarding_welcome_body">Mari siapkan desktop Anda. Ini hanya perlu waktu semenit.</string>
-    <string name="onboarding_renderer_title">Pilih renderer Anda</string>
-    <string name="onboarding_renderer_description">Vulkan lebih baru dan bisa lebih cepat di beberapa perangkat, tapi tidak semua perangkat mendapat manfaat yang sama — kualitas dukungannya bervariasi. OpenGL ES adalah pilihan aman dan kompatibel yang bekerja baik hampir di mana saja. Anda bisa mengubah ini kapan saja dari Pengaturan Lanjutan.</string>
-    <string name="onboarding_renderer_auto">Otomatis</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Info renderer tidak tersedia saat ini</string>
-    <string name="onboarding_renderer_change_later_note">Anda bisa mengubah ini kapan saja dari Pengaturan Lanjutan.</string>
     <string name="onboarding_permissions_title">Satu hal lagi</string>
     <string name="onboarding_permissions_body">Memberikan akses Shizuku memungkinkan desktop memulai langsung, tanpa perlu perintah tambahan. Anda bisa melewati ini dan memberikannya nanti dari Pengaturan.</string>
     <string name="onboarding_skip_warning">Tanpa ini, desktop akan meminta izin dengan cara biasa setiap kali dibutuhkan — itu juga sepenuhnya baik-baik saja, hanya alur yang berbeda.</string>

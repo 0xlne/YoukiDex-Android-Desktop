@@ -80,8 +80,8 @@ class SoundsPreferences : PreferenceFragmentCompat() {
     // ══════════════════════════════════════════════════════
 
     private fun setupChargingToggle() {
-        // FIX (IllegalArgumentException crash — "You cannot keep your settings
-        // in the secure settings"): this key used to be written directly to
+        // Bug fix — IllegalArgumentException crash — "You cannot keep your settings
+        // in the secure settings". this key used to be written directly to
         // Settings.System via DeviceUtils.putSystemSetting(), but
         // "charging_sounds_enabled" isn't a real system key (it's not on the
         // allowlist of Settings.System keys on modern Android) and nothing

@@ -8,8 +8,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.Surface
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.youki.dex.livewallpaper.data.WallpaperConfig
 import javax.microedition.khronos.egl.EGLConfig
@@ -112,7 +110,7 @@ class WallpaperGLRenderer(
     // ── GLSurfaceView.Renderer ───────────────────────────────────────────────
 
     override fun onSurfaceCreated(gl: GL10?, eglConfig: EGLConfig?) {
-        // FIX (Freeze/Glitch — GLSurfaceView EGL context recreation):
+        // Resolved issue: Freeze/Glitch — GLSurfaceView EGL context recreation.
         // GLSurfaceView recreates the EGL context on every onResume() — meaning
         // onSurfaceCreated() gets called again after every pause/resume (e.g.
         // the user presses Home and comes back, or opens Settings and exits).
@@ -287,7 +285,7 @@ class WallpaperGLRenderer(
         }
     }
 
-    // FIX (Crash — Use-After-Release + leaked GL resources):
+    // Fix for Crash — Use-After-Release + leaked GL resources:
     // The old release() only released the SurfaceTexture and ignored:
     //   1. oesTextureId — a texture registered on the GPU that stays reserved forever
     //   2. videoProgram / bgProgram — GL programs that never get deleted

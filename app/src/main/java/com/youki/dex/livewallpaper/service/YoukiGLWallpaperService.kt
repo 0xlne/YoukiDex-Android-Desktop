@@ -1,9 +1,9 @@
 package com.youki.dex.livewallpaper.service
 
 import android.service.wallpaper.WallpaperService
+import android.util.Log
 import android.view.SurfaceHolder
 import android.view.Surface
-import androidx.lifecycle.LifecycleService
 import com.youki.dex.livewallpaper.data.WallpaperConfig
 import com.youki.dex.livewallpaper.data.WallpaperConfigRepository
 import com.youki.dex.livewallpaper.engine.VideoEngine
@@ -22,10 +22,14 @@ import kotlinx.coroutines.flow.collectLatest
  * │   • Phases 1+2+3 (GL): [WallpaperGLRenderer] draws the frame with the  │
  * │     correct transform and colors on every cycle.                       │
  * │   • Phase 4 (Performance): [VideoEngine] controls the speed, and       │
- * │     [FpsLimiter] controls the requestRender() rate.                    │
+ * │     WallpaperGLEngine.maxFps throttles the requestRender() rate.       │
  * └────────────────────────────────────────────────────────────────────────┘
  */
 class YoukiGLWallpaperService : WallpaperService() {
+
+    companion object {
+        private const val TAG = "YoukiGLWallpaperService"
+    }
 
     override fun onCreateEngine(): Engine = GLEngine()
 
@@ -44,7 +48,7 @@ class YoukiGLWallpaperService : WallpaperService() {
 
             videoEngine = VideoEngine(this@YoukiGLWallpaperService)
 
-            // FIX (frame throttling): previously there was an FpsLimiter that
+            // Previously broken (frame throttling): previously there was an FpsLimiter that
             // filtered onFrameAvailable by comparing timestamps against an
             // "fpsLimit" the user set from the Editor — meaning real video
             // frames that actually arrived were being dropped if the chosen
@@ -63,7 +67,7 @@ class YoukiGLWallpaperService : WallpaperService() {
                 }
             )
 
-            // FIX (Crash #2 — NPE in SurfaceView.onAttachedToWindow): we no
+            // Fix for Crash #2 — NPE in SurfaceView.onAttachedToWindow: we no
             // longer use GLSurfaceView at all here — replaced it with
             // [WallpaperGLEngine], which manages EGL manually with no
             // dependency on a real View/Window.
@@ -108,6 +112,13 @@ class YoukiGLWallpaperService : WallpaperService() {
                 repo.observeActive().collectLatest { config ->
                     if (config == null) return@collectLatest
                     renderer.updateConfig(config)
+                    // Per-wallpaper setting (fragment_ed_unified.xml's "Max
+                    // FPS" slider, saved on WallpaperConfig itself) — read
+                    // here on every config update the same way every other
+                    // per-wallpaper setting below is, so switching to a
+                    // different saved wallpaper also switches its FPS cap
+                    // immediately, same as brightness/contrast/etc. do.
+                    glEngine.maxFps = config.maxFps
 
                     // Fully decoupled from landscape: we read the audio/speed
                     // settings for the screen's actual current orientation only
@@ -136,7 +147,7 @@ class YoukiGLWallpaperService : WallpaperService() {
             val config = renderer.config
             val orientation = WallpaperConfig.orientationFor(renderer.screenWidth, renderer.screenHeight)
             val audio = config.audioPlaybackFor(orientation)
-            // FIX (black screen until app restart): switching videos reuses
+            // Previously broken (black screen until app restart): switching videos reuses
             // the same SurfaceTexture (see WallpaperGLRenderer.clearCurrentFrame
             // for the full explanation) — clear any stale frame state left by
             // the previous video before the new player starts writing to it.
@@ -224,7 +235,7 @@ class YoukiGLWallpaperService : WallpaperService() {
         override fun onDestroy() {
             super.onDestroy()
             serviceScope.cancel()
-            // FIX (Crash — wrong teardown order): the old code used to release
+            // Patched: Crash — wrong teardown order. the old code used to release
             // renderer before glEngine — but glEngine still uses renderer (via
             // onDrawFrame) while it's being released. The correct order:
             //   1. Stop video playback first (no more frames)

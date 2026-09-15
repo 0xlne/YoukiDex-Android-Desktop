@@ -10,13 +10,15 @@ import android.os.Looper
 import android.provider.Settings
 import androidx.preference.PreferenceManager
 import com.youki.dex.R
-import com.youki.dex.services.DOCK_SERVICE_ACTION
 import com.youki.dex.services.NotificationService
+import com.youki.dex.utils.AppUtils
 import com.youki.dex.utils.DeviceUtils
 
 /**
  * Trampoline activity for the home-screen shortcut.
- * Replicates DockTileService.onClick() logic exactly — copy/paste.
+ * Shares its DEX-stop/switch-launcher logic with DockTileService's onClick
+ * via AppUtils.stopDexAndLaunchOtherHome (previously two separate
+ * copy/pasted copies of the same logic — see that function's doc comment).
  */
 class ShortcutLauncherActivity : Activity() {
 
@@ -100,24 +102,10 @@ class ShortcutLauncherActivity : Activity() {
             }
 
         } else {
-            // DEX is running — stop it (same logic as disable_self in DockTileService)
-            sendBroadcast(
-                Intent(DOCK_SERVICE_ACTION)
-                    .setPackage(packageName)
-                    .putExtra("action", "disable_self")
-            )
-            val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-            val launchers  = packageManager.queryIntentActivities(homeIntent, 0)
-                .filter { it.activityInfo.packageName != packageName }
-            val target = launchers.firstOrNull()
-            if (target != null) {
-                startActivity(
-                    Intent(Intent.ACTION_MAIN)
-                        .addCategory(Intent.CATEGORY_HOME)
-                        .setPackage(target.activityInfo.packageName)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                )
-            }
+            // DEX is running — stop it (see AppUtils.stopDexAndLaunchOtherHome's
+            // own doc comment for why this used to be a separate near-identical
+            // copy of DockTileService's onClick logic)
+            AppUtils.stopDexAndLaunchOtherHome(this) { intent -> startActivity(intent) }
             finish()
         }
     }

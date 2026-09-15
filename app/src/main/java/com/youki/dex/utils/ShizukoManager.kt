@@ -338,6 +338,11 @@ class ShizukoManager private constructor(private val context: Context) {
     private var newProcessMethod: Method? = null
 
     @Suppress("DiscouragedPrivateApi")
+    // Internal visibility so UhidManager (same package group — utils/) can
+    // open a long-lived process (cat > /dev/uhid) without routing through
+    // the shell() helper which drains stdout and destroys the process.
+    internal fun newProcessPublic(cmd: String) = newProcess(cmd)
+
     private fun newProcess(cmd: String): ShizukuRemoteProcess {
         val m = newProcessMethod ?: Shizuku::class.java.getDeclaredMethod(
             "newProcess", Array<String>::class.java, Array<String>::class.java, String::class.java

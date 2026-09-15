@@ -8,8 +8,6 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
 import android.view.animation.DecelerateInterpolator
-import androidx.core.content.ContextCompat
-
 /**
  * A toggle button between List mode (lines) and Grid mode (2x2 squares)
  * Draws the icon directly on the Canvas with no external images

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Trackpad screen — laptop-touchpad layout, not a row of separate buttons.
+
+    Full-bleed black surface. A thin horizontal divider near the bottom
+    splits it into two zones exactly like a real laptop trackpad:
+      - everything ABOVE the divider: free movement surface. Single tap =
+        left click, double tap = double click, drag = cursor move.
+      - everything BELOW the divider: click zone, itself split down the
+        middle — left half = left click, right half = right click. No
+        movement here, only clicks (matches how a laptop trackpad's
+        physical click-button strip works).
+
+    The header (back button, title, status, mode switch) is a thin strip
+    pinned to the very top — small on purpose so it doesn't eat into the
+    movement surface, since that surface wants to be as large as possible.
+-->
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Thin header strip, pinned to top. -->
+    <LinearLayout
+        android:id="@+id/trackpad_header_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="4dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:background="#000000">
+
+        <ImageButton
+            android:id="@+id/trackpad_back_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="#FFFFFF"
+            android:contentDescription="@string/trackpad_back_cd" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/trackpad_mode_toggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/trackpad_mode_direct_btn"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:minWidth="0dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@string/trackpad_mode_direct"
+                android:textSize="11sp"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/trackpad_mode_otg_btn"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:minWidth="0dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@string/trackpad_mode_otg"
+                android:textSize="11sp"
+                android:textAllCaps="false" />
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/trackpad_status_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/trackpad_status_connecting"
+            android:textColor="#777777"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+
+    <!-- Click zone: pinned to the bottom, fixed height, split left/right.
+         No drag/move handling here — only taps, like a laptop's physical
+         click strip below the pad. -->
+    <LinearLayout
+        android:id="@+id/trackpad_click_zone"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/trackpad_left_click_zone"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:contentDescription="@string/trackpad_left_click" />
+
+        <View
+            android:id="@+id/trackpad_right_click_zone"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:contentDescription="@string/trackpad_right_click" />
+
+    </LinearLayout>
+
+    <!-- The divider line separating the movement surface from the click zone. -->
+    <View
+        android:id="@+id/trackpad_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_above="@id/trackpad_click_zone"
+        android:background="#333333" />
+
+    <!-- Free movement surface: fills everything between the header and the
+         divider. Drag = cursor move, single tap = left click, double tap =
+         double click. -->
+    <FrameLayout
+        android:id="@+id/trackpad_surface"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_below="@id/trackpad_header_row"
+        android:layout_above="@id/trackpad_divider">
+
+        <TextView
+            android:id="@+id/trackpad_hint_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/trackpad_surface_hint"
+            android:textColor="#333333"
+            android:textSize="14sp" />
+
+    </FrameLayout>
+
+</RelativeLayout>

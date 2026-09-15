@@ -8,58 +8,25 @@ android {
     namespace "com.youki.dex"
     compileSdk 35
 
-    signingConfigs {
-        release {
-            storeFile rootProject.file("youkidex-release-key.jks")
-            storePassword "000000"
-            keyAlias "youkidex-key"
-            keyPassword "000000"
-        }
-    }
-
     defaultConfig {
         applicationId "com.youki.dex"
         minSdk 26
         targetSdk 35
-        versionCode 3000
-        versionName "3.0"
+        versionCode 3500
+        versionName "3.5"
         multiDexEnabled true
-        // Rust .so files are built per-ABI by the cargoBuild task below into
-        // app/rust/youki-engine/target/<rust-triple>/<release|debug>/, then
-        // symlinked/copied by cargo-ndk into app/build/rustJniLibs/<abi>/ —
-        // sourceSets.jniLibs below points Gradle's packaging step at that
-        // output directory. abiFilters here must match the -t flags passed
-        // to `cargo ndk` in the cargoBuild task, or Gradle will either
-        // silently skip an ABI it expected `.so` files for, or the
-        // resulting APK will be missing native libs for architectures this
-        // filter includes but cargo-ndk wasn't told to build.
         ndk {
             abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
             // NOTE: "x86" (32-bit) intentionally omitted — matches minSdk 26
             // (Android 8.0+) targeting real devices; 32-bit x86 Android
             // devices are effectively nonexistent among app.build.gradle's
-            // actual target audience (emulators use x86_64). Add "x86" back
-            // to both this list and the cargoBuild task's -t flags below if
-            // 32-bit-x86 emulator support is specifically needed.
-        }
-    }
-
-    // ── Rust/cargo-ndk integration ──────────────────────────────────────
-    // Points Gradle's native-library packaging step at cargo-ndk's output
-    // directory. This does NOT itself invoke cargo — that's the cargoBuild
-    // task defined outside this `android {}` block below, wired to run via
-    // `preBuild.dependsOn cargoBuild` at the bottom of this file.
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ["${projectDir}/build/rustJniLibs"]
+            // actual target audience (emulators use x86_64).
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -129,96 +96,4 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'org.jsoup:jsoup:1.17.2'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3'
-}
-
-// ── Rust/cargo-ndk build task ────────────────────────────────────────────
-//
-// Prerequisites this task assumes are already set up on the build machine
-// (NOT installed automatically by this task — flagged explicitly rather
-// than silently failing with a confusing error if missing):
-//   - Rust toolchain with the Android targets added:
-//       rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-//   - cargo-ndk installed: cargo install cargo-ndk
-//   - ANDROID_NDK_HOME (or ANDROID_NDK_ROOT) environment variable set,
-//     pointing at an installed NDK matching app/rust/.cargo/config.toml's
-//     assumptions (API level 24+ clang wrappers available).
-//
-// This was never actually run in this session (no Rust/NDK toolchain in
-// this sandbox — see the handoff doc's build-verification caveat that
-// applies to the whole app/rust/ tree, not just this Gradle task). The
-// command shape below matches cargo-ndk's documented CLI usage, but has
-// not been build-verified end-to-end.
-task cargoBuild(type: Exec) {
-    workingDir "${projectDir}/rust/youki-engine"
-
-    inputs.files(
-        fileTree("${projectDir}/rust/youki-engine/src").include("**/*.rs"),
-        file("${projectDir}/rust/youki-engine/Cargo.toml"),
-        file("${projectDir}/rust/youki-engine/Cargo.lock"),
-        file("${projectDir}/rust/.cargo/config.toml")
-    )
-
-    outputs.dir("${projectDir}/build/rustJniLibs")
-    outputs.dir("${projectDir}/rust/youki-engine/target/aarch64-linux-android/release")
-    outputs.dir("${projectDir}/rust/youki-engine/target/armv7-linux-androideabi/release")
-    outputs.dir("${projectDir}/rust/youki-engine/target/x86_64-linux-android/release")
-
-    def isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
-    def cargoNdkExecutable = isWindows ? "cargo.exe" : "cargo"
-
-    def termuxPrefix = System.getenv("PREFIX") ?: "/data/data/com.termux/files/usr"
-    environment "LD_LIBRARY_PATH", "${termuxPrefix}/lib"
-    environment "PATH", "${termuxPrefix}/bin:${System.getenv('PATH')}"
-
-    def certFile = "${termuxPrefix}/etc/tls/cert.pem"
-    environment "SSL_CERT_FILE", certFile
-    environment "CARGO_HTTP_CAINFO", certFile
-
-    def outputDir = "${projectDir}/build/rustJniLibs"
-
-    commandLine cargoNdkExecutable,
-        "ndk",
-        "-t", "arm64-v8a",
-        "-t", "armeabi-v7a",
-        "-t", "x86_64",
-        "--platform", "24",
-        "-o", outputDir,
-        "build",
-        "--release"
-
-    doFirst {
-        logger.lifecycle("Building youki_engine Rust crate via cargo-ndk (this can take a while on first build)...")
-    }
-}
-
-tasks.matching { it.name == "preBuild" }.configureEach {
-    dependsOn cargoBuild
-}
-
-task copyShellServerBinaries(type: Copy) {
-    dependsOn cargoBuild
-    def rustRoot = "${projectDir}/rust/youki-engine/target"
-    def assetsBinDir = "${projectDir}/src/main/assets/bin"
-
-    from("${rustRoot}/aarch64-linux-android/release") {
-        include "youki_shell_server"
-        into "arm64-v8a"
-    }
-    from("${rustRoot}/armv7-linux-androideabi/release") {
-        include "youki_shell_server"
-        into "armeabi-v7a"
-    }
-    from("${rustRoot}/x86_64-linux-android/release") {
-        include "youki_shell_server"
-        into "x86_64"
-    }
-    into assetsBinDir
-
-    doFirst {
-        logger.lifecycle("Copying youki_shell_server binaries into assets/bin/...")
-    }
-}
-
-tasks.matching { it.name == "preBuild" }.configureEach {
-    dependsOn copyShellServerBinaries
 }

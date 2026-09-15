@@ -458,7 +458,6 @@
     <string name="desktop_density_summary">桌面模式啟動時自動更改螢幕密度（推薦：200）。退出時恢復。</string>
     <string name="notification_access_required">需要通知訪問許可權</string>
     <string name="one_user_on_device">此裝置上有一個使用者</string>
-    <string name="file_manager">檔案管理器</string>
     <string name="sound_startup">啟動</string>
     <string name="hide_status_bar_summary">隱藏頂部 Android 狀態列，獲得更簡潔的桌面外觀</string>
     <string name="about_version">版本</string>
@@ -609,7 +608,6 @@
     <string name="delete_failed">刪除失敗</string>
     <string name="delete_file">刪除檔案</string>
     <string name="edited_successfully">已編輯</string>
-    <string name="lw_fps_limit">FPS 限制</string>
     <string name="name_is_empty">名稱為空！</string>
     <string name="cannot_fetch_users">無法獲取使用者</string>
     <string name="compressed_prefix">已壓縮</string>
@@ -861,13 +859,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">歡迎使用 Youki DEX</string>
     <string name="onboarding_welcome_body">讓我們來設定你的桌面吧，只需一分鐘。</string>
-    <string name="onboarding_renderer_title">選擇渲染引擎</string>
-    <string name="onboarding_renderer_description">Vulkan 較新，在某些裝置上可能較快，但並非所有裝置都能同等受惠——支援品質因裝置而異。OpenGL ES 是一個安全、相容性佳的選擇，幾乎在所有裝置上都能良好運作。你可以隨時在進階設定中變更此設定。</string>
-    <string name="onboarding_renderer_auto">自動</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">目前無法取得渲染引擎資訊</string>
-    <string name="onboarding_renderer_change_later_note">你可以隨時在進階設定中變更此設定。</string>
     <string name="onboarding_permissions_title">還有一件事</string>
     <string name="onboarding_permissions_body">授予 Shizuku 權限可讓桌面直接啟動，無需額外提示。你可以跳過此步驟，稍後在設定中授予權限。</string>
     <string name="onboarding_skip_warning">如果不設定此項，桌面每次需要權限時都會以一般方式請求——這完全沒問題，只是流程不同而已。</string>

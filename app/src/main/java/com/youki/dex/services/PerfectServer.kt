@@ -55,7 +55,6 @@ import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Animation
-import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
@@ -108,6 +107,7 @@ import com.youki.dex.receivers.SoundEventsReceiver
 import com.youki.dex.utils.AppUtils
 import com.youki.dex.utils.AppUtils.makeActivityOptions
 import com.youki.dex.utils.ColorUtils
+import com.youki.dex.utils.CursorOverlayManager
 import com.youki.dex.utils.DeepShortcutManager
 import com.youki.dex.utils.DeviceUtils
 import com.youki.dex.utils.IconPackUtils
@@ -175,6 +175,32 @@ const val ACTION_LAUNCH_APP = "launch_app"
 const val ACTION_REFRESH_USER_PROFILE = "refresh_user_profile"
 const val DESKTOP_APP_PINNED = "desktop_app_pinned"
 const val DOCK_SERVICE_ACTION = "dock_service_action"
+// Virtual-mouse actions on the DOCK_SERVICE_ACTION channel — sent by
+// TrackpadActivity (running on the phone's own screen) to DockService
+// (which owns the secondary display's CursorOverlayManager). See
+// CursorOverlayManager's doc comment for why this is a separate path from
+// UhidManager's USB-OTG mouse.
+const val ACTION_CURSOR_MOVE = "cursor_move"
+const val ACTION_CURSOR_CLICK = "cursor_click"
+const val EXTRA_DX = "dx"
+const val EXTRA_DY = "dy"
+const val EXTRA_BUTTON = "button"
+// Cursor availability broadcast — DockService -> TrackpadActivity, the
+// reverse direction of ACTION_CURSOR_MOVE/CLICK. Fixes a real "drag on
+// nothing" bug: without this, if the accessibility service was never
+// enabled, or the secondary display disconnected mid-session, the phone
+// screen kept accepting drags with zero feedback because
+// moveCursorBy/dispatchCursorClick just silently no-op on a null overlay.
+const val ACTION_CURSOR_STATUS = "cursor_status"
+const val ACTION_QUERY_CURSOR_STATUS = "query_cursor_status"
+const val EXTRA_CURSOR_AVAILABLE = "cursor_available"
+// Gesture timings for dispatchCursorClick — kept as named constants rather
+// than inline magic numbers since "double" dispatches two of these back to
+// back and the gap between them has to land inside the OS's own
+// double-tap window to actually register as a double-click.
+private const val TAP_DURATION_MS = 60L
+private const val LONG_PRESS_DURATION_MS = 600L
+private const val DOUBLE_TAP_GAP_MS = 100L
 
 class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, OnTouchListener,
     OnAppClickListener, OnDockAppClickListener {
@@ -200,6 +226,14 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
     private var orientation = -1
     private var displayListener: DisplayManager.DisplayListener? = null
+    // GitHub issue #15 ("wallpaper on secondary screen not working") — see
+    // SecondaryDisplayWallpaperPresentation's own doc comment for the full
+    // story. Lifecycle is tied to the secondary display's actual presence
+    // (onDisplayAdded/onDisplayRemoved below), not to the "prefer_last_display"
+    // dock-placement preference — the live wallpaper should show on whatever
+    // secondary display exists, independent of where the dock itself lives.
+    private var secondaryDisplayPresentation:
+        com.youki.dex.livewallpaper.service.SecondaryDisplayWallpaperPresentation? = null
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var activityManager: ActivityManager
     private lateinit var appsBtn: ImageView
@@ -232,7 +266,6 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
     private lateinit var appMenu: LinearLayout
     private lateinit var searchLayout: LinearLayout
     private var powerMenu: LinearLayout? = null
-    private var audioPanel: LinearLayout? = null
     private lateinit var searchEntry: LinearLayout
     private lateinit var dockLayout: RelativeLayout
     private lateinit var windowManager: WindowManager
@@ -254,7 +287,6 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         appMenu.scaleY = 1f; appMenu.translationY = 0f
     }
     private var isPinned = false
-    private var audioPanelVisible = false
     private var systemApp = false
     private var secondary = false
     private lateinit var dockLayoutParams: WindowManager.LayoutParams
@@ -269,6 +301,13 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
     private lateinit var soundEventsReceiver: SoundEventsReceiver
     private var launcherReceiver: BroadcastReceiver? = null
     private var dockActionReceiver: BroadcastReceiver? = null
+    // Direct-display virtual mouse (see CursorOverlayManager's doc comment):
+    // draws a cursor on the secondary display and dispatches real gestures
+    // at its position, driven by relative deltas broadcast from
+    // TrackpadActivity ("cursor_move"/"cursor_click" on DOCK_SERVICE_ACTION).
+    // Independent of "secondary" (dock placement preference) — this cursor
+    // tracks whatever secondary display is physically attached right now.
+    private var cursorOverlay: CursorOverlayManager? = null
     private var notificationServiceReceiver: BroadcastReceiver? = null
     private var wallpaperReceiver: BroadcastReceiver? = null
     private var packageReceiver: BroadcastReceiver? = null
@@ -287,6 +326,12 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
     private var dockHeight: Int = 0
     private var dockMargin: Int = 0
     private lateinit var handleLayoutParams: WindowManager.LayoutParams
+    // Field (not local to onServiceConnected like it originally was) so
+    // refreshForDisplayChange can reuse the same LayoutParams object when
+    // moving topRightCorner/bottomRightCorner to a different display's
+    // WindowManager — see that function's own comment for why the move
+    // itself (not just this field) was the actual bug fix.
+    private lateinit var cornersLayoutParams: WindowManager.LayoutParams
     private lateinit var launcherApps: LauncherApps
     private var iconPackUtils: IconPackUtils? = null
     // Quick Settings Panel
@@ -351,6 +396,9 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         appsBtn = dock.findViewById(R.id.apps_btn)
         appsBtnCenter = dock.findViewById(R.id.apps_btn_center)
         tasksGv = dock.findViewById(R.id.apps_lv)
+        // Icons row is always horizontal now — the dock only supports
+        // top/bottom (see DockPositionUtils restructure), so there's no
+        // vertical/column arrangement to switch into anymore.
         val layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         tasksGv.layoutManager = layoutManager
         backBtn = dock.findViewById(R.id.back_btn)
@@ -378,7 +426,15 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             resourceMonitorTv?.visibility = View.VISIBLE
             startResourceMonitor()
         }
+        // Discord report ("the dock hides and appears when the courser hover
+        // over its location and if there is a way to not make it do that"):
+        // this listener used to be unconditional — every dock had this
+        // hover-to-reveal behavior with no way to turn it off. Gated behind
+        // "dock_hover_show_hide" (default true, preserving the original
+        // behavior for anyone who doesn't touch the new setting).
         dock.setOnHoverListener { _, event ->
+            if (!sharedPreferences.getBoolean("dock_hover_show_hide", true))
+                return@setOnHoverListener false
             if (event.action == MotionEvent.ACTION_HOVER_ENTER) {
                 if (dockLayout.isGone) showDock()
             } else if (event.action == MotionEvent.ACTION_HOVER_EXIT) if (dockLayout.isVisible) {
@@ -470,9 +526,21 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
         notificationBtn.setOnClickListener {
             animateBtn(it) {
-                if (sharedPreferences.getBoolean("enable_qs_notif", true)) {
-                    if (audioPanelVisible) hideAudioPanel()
-                            toggleNotificationPanel(!Utils.notificationPanelVisible)
+                // FIX: dead setting — "enable_notif_panel" ("Notification
+                // panel", preferences_notification.xml) was defined, shown
+                // in Settings, defaulting to true, but nothing anywhere in
+                // the codebase ever read it — it had zero effect. The
+                // similarly-named-but-different "enable_qs_notif" (a
+                // separate key, preferences_dock.xml) only controls whether
+                // the notification button itself is visible on the dock —
+                // it says nothing about whether the panel it opens is
+                // allowed to open. Checked here, alongside enable_qs_notif,
+                // so a user who disables "Notification panel" gets the
+                // panel itself gated closed, not just relying on the
+                // (different) button-visibility setting.
+                if (sharedPreferences.getBoolean("enable_qs_notif", true) &&
+                    sharedPreferences.getBoolean("enable_notif_panel", true)) {
+                    toggleNotificationPanel(!Utils.notificationPanelVisible)
                 } else performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
             }
         }
@@ -510,7 +578,24 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
         // ── User button → opens combined Power + Users menu ──────────────────
         userBtn.setOnClickListener {
-            animateBtn(it) { showPowerMenu() }
+            animateBtn(it) {
+                // FIX: dead setting — "enable_power_menu" ("Built in power
+                // menu: use a custom power menu instead of the system one",
+                // preferences_advanced.xml, defaults to false) was defined
+                // and shown in Settings, but showPowerMenu() below was
+                // called unconditionally — the custom menu always appeared
+                // regardless of the switch, and there was no way to ever
+                // get the actual system power dialog this setting's own
+                // description promises as the alternative. GLOBAL_ACTION_
+                // POWER_DIALOG is the standard AccessibilityService action
+                // for that — DockService already is one (see its class
+                // declaration).
+                if (sharedPreferences.getBoolean("enable_power_menu", false)) {
+                    showPowerMenu()
+                } else {
+                    performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+                }
+            }
         }
 
         // ── Load user icon for dock button ────────────────────────────────────
@@ -600,12 +685,17 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             else
                 ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 
-        val startupVertGravity = Gravity.BOTTOM
+        // Dock can be docked to the top or bottom of the screen via the
+        // "dock_position" preference — see DockPositionUtils for the
+        // single source of truth this and every other call site reads from.
+        val dockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
         if (isRoundOnStartup) {
-            dockLayoutParams.gravity = startupVertGravity or Gravity.CENTER_HORIZONTAL
+            dockLayoutParams.gravity =
+                com.youki.dex.utils.DockPositionUtils.dockGravity(dockPosition, centered = true)
             dockLayoutParams.y = dockMargin
         } else {
-            dockLayoutParams.gravity = startupVertGravity or Gravity.START
+            dockLayoutParams.gravity =
+                com.youki.dex.utils.DockPositionUtils.dockGravity(dockPosition, centered = false)
             dockLayoutParams.y = 0
         }
         // Hide status bar via WindowManager flags — stronger than policy_control
@@ -626,9 +716,46 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         dockLayoutParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
         // blur requires TRANSLUCENT format — already set in makeWindowParams
         // Dock appears immediately when service starts
-        windowManager.addView(dock, dockLayoutParams)
+        safeAddView(dock, dockLayoutParams)
 
-        // FIX (blank gap over the keyboard / bottom of screen unusable): on
+        // FIX: dock position not accounting for the gesture-area safe
+        // margin, inconsistently ("sometimes it shows fully, sometimes
+        // part of it is cut off" — user report). Root cause: on 15+,
+        // setFitInsetsTypes(0) just above makes the dock ignore the
+        // system's own insets entirely, so the ONLY thing that could keep
+        // it clear of the gesture area is DeviceUtils.getNavBarHeight() —
+        // but the initial y/gravity set above never calls it at all, and
+        // DeviceUtils.getNavBarHeight is itself flakiest at exactly this
+        // moment (see its own doc comment) — right as the service just
+        // connected and the window's insets may not have settled yet — so
+        // whether the dock ends up safely positioned or not ends up
+        // depending on boot-to-boot timing, not anything the user did.
+        //
+        // Post a one-shot re-layout after the dock's first real frame
+        // (view tree fully attached, insets settled by then) so the
+        // bottom-docked position gets nudged up by a stable
+        // getNavBarHeight() reading instead of relying on the
+        // startup-time guess above — self-healing exactly the case the
+        // cache fix in getNavBarHeight can't cover on its own (no prior
+        // good reading to fall back on this early). Skipped for a
+        // top-docked or floating/rounded dock: gravity=TOP has no gesture
+        // bar to clear, and the rounded/centered case already gets its
+        // margin from dockMargin above, not the nav bar.
+        if (Build.VERSION.SDK_INT >= 35 && !isRoundOnStartup && dockPosition != com.youki.dex.utils.DockPositionUtils.Position.TOP) {
+            dock.viewTreeObserver.addOnGlobalLayoutListener(object :
+                android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    dock.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    val navHeight = DeviceUtils.getNavBarHeight(context)
+                    if (navHeight > 0 && dockLayoutParams.y != navHeight) {
+                        dockLayoutParams.y = navHeight
+                        try { windowManager.updateViewLayout(dock, dockLayoutParams) } catch (e: Exception) {}
+                    }
+                }
+            })
+        }
+
+        // Fix for blank gap over the keyboard / bottom of screen unusable: on
         // Android 15+ (SDK 35+) setFitInsetsTypes(0) above makes the dock
         // ignore ALL insets, including the IME (keyboard) inset — this was
         // intentional so the dock doesn't get resized/pushed by
@@ -667,14 +794,19 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         topRightCorner.setOnHoverListener(HotCornersHoverListener("enable_corner_top_right"))
         bottomRightCorner.setOnHoverListener(HotCornersHoverListener("enable_corner_bottom_right"))
         updateCorners()
-        val cornersLayoutParams = Utils.makeWindowParams(
-            Utils.dpToPx(context, 2), -2, context,
+        // Customization point: the touch/hover-trigger width of the corner
+        // strip, previously a fixed 2dp (a very thin target — easy to miss
+        // on larger/desktop-class displays this app targets). Configurable
+        // from 2 to 24dp via "hot_corners_width" — see preferences_hot_corners.xml.
+        val cornerWidthDp = sharedPreferences.getString("hot_corners_width", "2")?.toIntOrNull() ?: 2
+        cornersLayoutParams = Utils.makeWindowParams(
+            Utils.dpToPx(context, cornerWidthDp), -2, context,
             secondary
         )
         cornersLayoutParams.gravity = Gravity.TOP or Gravity.END
-        windowManager.addView(topRightCorner, cornersLayoutParams)
+        safeAddView(topRightCorner, cornersLayoutParams)
         cornersLayoutParams.gravity = Gravity.BOTTOM or Gravity.END
-        windowManager.addView(bottomRightCorner, cornersLayoutParams)
+        safeAddView(bottomRightCorner, cornersLayoutParams)
 
         //App menu
         appMenu = LayoutInflater.from(ContextThemeWrapper(context, R.style.AppTheme_Dock))
@@ -819,6 +951,22 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                         // تحدّث زر المستخدم بالدوك فورًا بدون إعادة تشغيل التطبيق
                         refreshUserButton()
                     }
+                    ACTION_CURSOR_MOVE -> {
+                        val dx = intent.getIntExtra(EXTRA_DX, 0)
+                        val dy = intent.getIntExtra(EXTRA_DY, 0)
+                        moveCursorBy(dx, dy)
+                    }
+                    ACTION_CURSOR_CLICK -> {
+                        val button = intent.getStringExtra(EXTRA_BUTTON) ?: "left"
+                        dispatchCursorClick(button)
+                    }
+                    ACTION_QUERY_CURSOR_STATUS -> {
+                        // TrackpadActivity just opened (or came back to the
+                        // foreground) and wants to know right away, rather
+                        // than waiting for the next start/stop event —
+                        // which might be a while if nothing changes.
+                        broadcastCursorStatus(cursorOverlay?.isShowing == true)
+                    }
                 }
             }
         }
@@ -925,7 +1073,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         updateMenuIcon()
         loadPinnedApps()
         placeRunningApps()
-        windowManager.addView(dockHandle, handleLayoutParams)
+        safeAddView(dockHandle, handleLayoutParams)
         if (sharedPreferences.getBoolean("pin_dock", true))
             pinDock()
         else
@@ -943,6 +1091,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                         // Secondary display appeared → move dock there
                         refreshForDisplayChange()
                     }
+                    startSecondaryDisplayWallpaperIfNeeded()
+                    startCursorOverlayIfNeeded()
                 }
             }
             override fun onDisplayRemoved(displayId: Int) {
@@ -951,6 +1101,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                         // Secondary display gone → fall back to primary
                         refreshForDisplayChange()
                     }
+                    stopSecondaryDisplayWallpaper()
+                    stopCursorOverlay()
                 }
             }
             override fun onDisplayChanged(displayId: Int) {
@@ -962,15 +1114,31 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                     // separate updateDockHeight()+updateDockShape() calls.
                     recomputeDockHeight()
                     recomputeDockShape()
-                    windowManager.updateViewLayout(dock, dockLayoutParams)
+                    safeUpdateViewLayout(dock, dockLayoutParams)
                     applyTheme()
                     if (::tasksGv.isInitialized) updateRunningTasks(true)
                 }
             }
         }
         dm.registerDisplayListener(displayListener, android.os.Handler(android.os.Looper.getMainLooper()))
-        // Always hide status bar with YoukiDex — restored on close
-        DeviceUtils.hideStatusBar(context, true)
+        // Cover the case where a secondary display is already attached when
+        // the service starts (onDisplayAdded only fires for displays that
+        // appear *after* we register the listener).
+        startSecondaryDisplayWallpaperIfNeeded()
+        startCursorOverlayIfNeeded()
+        // Discord report ("the app switches my navigation to the 3 buttons
+        // automatically for some reason"): this used to unconditionally
+        // call hideStatusBar(context, true) here regardless of the
+        // "hide_status_bar" setting read later at line ~2531 — so even a
+        // user who turned that setting off still got policy_control's
+        // immersive.full=* applied once at startup. immersive.full affects
+        // both bars together (status + navigation), and on some devices/
+        // ROMs, requesting it while gesture navigation is active makes the
+        // system fall back to the 3-button navigation bar as part of
+        // honoring the immersive request — which is what was being
+        // reported as an unwanted automatic switch. Now this respects the
+        // same setting from the start instead of forcing it on unconditionally.
+        DeviceUtils.hideStatusBar(context, sharedPreferences.getBoolean("hide_status_bar", false))
     }
 
     private fun getAppActions(app: App): ArrayList<Action> {
@@ -1057,10 +1225,29 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         val actions = ArrayList<Action>()
         if (!AppUtils.isPinned(context, app, AppUtils.PINNED_LIST))
             actions.add(Action(R.drawable.ic_add_favorite, getString(R.string.favorites)))
-        if (!AppUtils.isPinned(context, app, AppUtils.DESKTOP_LIST))
+        val isPinnedToDesktop = AppUtils.isPinned(context, app, AppUtils.DESKTOP_LIST)
+        if (!isPinnedToDesktop)
             actions.add(Action(R.drawable.ic_add_to_desktop, getString(R.string.desktop)))
+        // Discord report ("and how to unpin apps"): this used to only ever
+        // add the "Dock" (pin) action when the app was NOT pinned, with no
+        // opposite action added when it WAS pinned — so once an app was
+        // pinned to the dock, no menu item existed anywhere to undo it.
+        // favorites/desktop already had this two-way pattern (see the
+        // separate "remove"/desktop-unpin handling further down in
+        // onDockAppClicked); dock was the one missing its other half.
         if (!AppUtils.isPinned(context, app, AppUtils.DOCK_PINNED_LIST))
             actions.add(Action(R.drawable.ic_pin, getString(R.string.dock)))
+        else
+            actions.add(Action(R.drawable.ic_unpin, getString(R.string.remove_from_dock)))
+
+        // Discord report ("what about closing apps? ... I want to disable
+        // them so when I switch back to my phone launcher I don't have to
+        // switch them back"): only shown when the app actually has a
+        // running task — no point offering to close something that isn't
+        // running, and findRunningTaskId returning -1 for it would make
+        // the click handler's AppUtils.closeTask call a silent no-op anyway.
+        if (findRunningTaskId(app.packageName) != -1)
+            actions.add(Action(R.drawable.ic_close, getString(R.string.close)))
 
         return actions
     }
@@ -1184,7 +1371,16 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 if (AppUtils.currentApp != pkg) {
                     AppUtils.currentApp = pkg
                     // أعد رسم الـ dock ليظهر الخط العريض تحت التطبيق النشط الجديد
-                    (tasksGv.adapter as? DockAppAdapter)?.notifyDataSetChanged()
+                    // GUARD: AccessibilityService can fire events before onServiceConnected
+                    // finishes inflating the dock view (findViewById for tasksGv happens
+                    // later in onServiceConnected). Without this check, a very early
+                    // TYPE_WINDOW_STATE_CHANGED event crashes with
+                    // "lateinit property tasksGv has not been initialized" — timing-
+                    // dependent, so it mostly surfaces on real devices under release
+                    // build speed rather than in a debug session.
+                    if (::tasksGv.isInitialized) {
+                        (tasksGv.adapter as? DockAppAdapter)?.notifyDataSetChanged()
+                    }
                 }
             }
         } else if (sharedPreferences.getBoolean(
@@ -1200,8 +1396,18 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
     private fun showToast(app: String, text: String) {
         val layoutParams = Utils.makeWindowParams(-2, -2, context, secondary)
-        layoutParams.gravity = Gravity.BOTTOM or Gravity.CENTER
-        layoutParams.y = dock.measuredHeight + Utils.dpToPx(context, 4)
+        // FIX: toast used to always anchor to the bottom of the screen —
+        // correct for a bottom dock, but wrong for a top dock, where the
+        // toast should sit just below the dock instead of far away at the
+        // opposite edge of the screen.
+        val toastDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+        if (toastDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP) {
+            layoutParams.gravity = Gravity.TOP or Gravity.CENTER
+            layoutParams.y = dock.measuredHeight + Utils.dpToPx(context, 4)
+        } else {
+            layoutParams.gravity = Gravity.BOTTOM or Gravity.CENTER
+            layoutParams.y = dock.measuredHeight + Utils.dpToPx(context, 4)
+        }
         val toast = LayoutInflater.from(context).inflate(R.layout.toast, null)
         ColorUtils.applyMainColor(context, sharedPreferences, toast)
         val textTv = toast.findViewById<TextView>(R.id.toast_tv)
@@ -1225,7 +1431,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                     }
                 })
         }, 5000)
-        // FIX (overlay outlives Close DEX): this used to be a raw
+        // Fix for overlay outlives Close DEX: this used to be a raw
         // windowManager.addView with cleanup relying entirely on the 5s
         // delayed callback above. If the service was destroyed before that
         // callback fired (Close DEX tapped right after a toast appeared),
@@ -1462,36 +1668,24 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
         if (dockLayoutParams.height != dockHeight) {
             dockLayoutParams.height = dockHeight
-            windowManager.updateViewLayout(dock, dockLayoutParams)
+            safeUpdateViewLayout(dock, dockLayoutParams)
         }
 
         dockHandler.removeCallbacksAndMessages(null)
         updateRunningTasks()
         dockLayout.visibility = View.VISIBLE
-        dockLayout.animate().cancel()
-        dockLayout.scaleX = 0.88f
-        dockLayout.scaleY = 0.88f
-        dockLayout.alpha = 0f
-        // FIX: اتجاه الأنيميشن حسب موضع الدوك
-        // دوك تحت: يطلع من تحت (+12dp) | دوك فوق: ينزل من فوق (-12dp)
-        val showTransY = Utils.dpToPx(context, 12).toFloat()
-        dockLayout.translationY = showTransY
         dockLayout.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        // POLISH: Material Design spring curve — snappy entry matches Samsung DeX feel
-        dockLayout.animate()
-            .scaleX(1f).scaleY(1f).alpha(1f).translationY(0f)
-            .setDuration(200)
-            .setInterpolator(interpSpringIn)
-            .setListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: android.animation.Animator) {
-                    dockLayout.setLayerType(View.LAYER_TYPE_NONE, null)
-                }
-                override fun onAnimationCancel(animation: android.animation.Animator) {
-                    dockLayout.scaleX = 1f; dockLayout.scaleY = 1f
-                    dockLayout.alpha = 1f; dockLayout.translationY = 0f
-                    dockLayout.setLayerType(View.LAYER_TYPE_NONE, null)
-                }
-            }).start()
+        // Feature request: show animation now slides in from whichever edge
+        // the dock is actually docked to (was previously always a vertical
+        // translationY slide regardless of position — see this function's
+        // own prior comment noting the intent but never wiring it up).
+        val dockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+        val showTransPx = Utils.dpToPx(context, 12).toFloat()
+        com.youki.dex.utils.DockPositionUtils.animateDockVisibility(
+            dockLayout, dockPosition, show = true, distancePx = showTransPx, durationMs = 200
+        ) {
+            dockLayout.setLayerType(View.LAYER_TYPE_NONE, null)
+        }
     }
 
     fun pinDock() {
@@ -1526,7 +1720,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         dockHandler.removeCallbacksAndMessages(null)
         dockHandler.postDelayed({
             if (!isPinned) {
-                // FIX ("الإشعارات تبقى بمنطقة فارغة لا يمكن لمسها"): this used to
+                // Fix for "الإشعارات تبقى بمنطقة فارغة لا يمكن لمسها": this used to
                 // only ever touch dockLayout/dock — if the notification popup
                 // (notificationLayout) or the full notifications/QS drawer
                 // (notificationPanel) happened to be open when the dock
@@ -1552,32 +1746,44 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
                 dockLayout.animate().cancel()
                 dockLayout.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                // POLISH: fast exit — scale + slide down + fade
-                // FIX: اتجاه الخروج حسب موضع الدوك (فوق = ينزع للأعلى، تحت = ينزع للأسفل)
-                val hideTransY = com.youki.dex.utils.Utils.dpToPx(context, 8).toFloat()
-                dockLayout.animate()
-                    .scaleX(0.90f).scaleY(0.90f).alpha(0f)
-                    .translationY(hideTransY)
-                    .setDuration(180)
-                    .setInterpolator(android.view.animation.AccelerateInterpolator(2f))
-                    .withEndAction {
-                        dockLayout.visibility = View.GONE
-                        dockLayout.scaleX = 1f; dockLayout.scaleY = 1f; dockLayout.alpha = 1f; dockLayout.translationY = 0f
-                        dockLayout.setLayerType(View.LAYER_TYPE_NONE, null)
-                        // Swipe mode removed: it left a small (dock_activation_area) window
-                        // still holding its bounds after hiding, which stole touches from
-                        // whatever was underneath even though nothing was visible there.
-                        // Handle mode is the only mode now — it fully GONEs the dock window
-                        // and shows a small, actually-visible handle button instead.
-                        dock.visibility = View.GONE
-                        dockHandle.visibility = View.VISIBLE
-                    }.start()
+                // Feature request: hide animation now slides out toward
+                // whichever edge the dock is docked to — see showDock()'s
+                // matching comment for the same intent-existed-but-was-
+                // never-wired-up history on this exact line.
+                val dockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+                val hideTransPx = com.youki.dex.utils.Utils.dpToPx(context, 8).toFloat()
+                com.youki.dex.utils.DockPositionUtils.animateDockVisibility(
+                    dockLayout, dockPosition, show = false, distancePx = hideTransPx, durationMs = 180
+                ) {
+                    dockLayout.visibility = View.GONE
+                    dockLayout.scaleX = 1f; dockLayout.scaleY = 1f; dockLayout.alpha = 1f
+                    dockLayout.translationX = 0f; dockLayout.translationY = 0f
+                    dockLayout.setLayerType(View.LAYER_TYPE_NONE, null)
+                    // Swipe mode removed: it left a small (dock_activation_area) window
+                    // still holding its bounds after hiding, which stole touches from
+                    // whatever was underneath even though nothing was visible there.
+                    // Handle mode is the only mode now — it fully GONEs the dock window
+                    // and shows a small, actually-visible handle button instead.
+                    dock.visibility = View.GONE
+                    dockHandle.visibility = View.VISIBLE
+                }
             }
         }, delay.toLong())
     }
 
     private fun getDefaultLaunchMode(app: String?): String {
         if (app == null) return "standard"
+        // FIX: dead setting — "always_floating" ("Override launch mode and
+        // always open apps in floating window mode", preferences_dock.xml)
+        // was defined, shown in Settings, and readable/writable via its
+        // SwitchPreferenceCompat, but nothing anywhere in the codebase ever
+        // called sharedPreferences.getBoolean("always_floating", ...) — the
+        // switch had zero effect no matter how the user set it. Checked
+        // first, before even remember_launch_mode, matching "Override" in
+        // the setting's own description: it's meant to win over every
+        // other launch-mode source, not just be one more input to them.
+        if (sharedPreferences.getBoolean("always_floating", false))
+            return "standard" // "standard" is this app's name for a floating/freeform window — see makeLaunchBounds
         // If user remembered a specific mode for this app, respect it
         val remembered: String? = db.getLaunchMode(app)
         if (sharedPreferences.getBoolean("remember_launch_mode", true) && remembered != null)
@@ -1588,6 +1794,64 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             return "fullscreen"
         // Default is always windowed — "standard" = freeform window
         return sharedPreferences.getString("launch_mode", "standard") ?: "standard"
+    }
+
+    /**
+     * Attempts to run [shellCmd] (an "am start --display ..." command, see
+     * AppUtils.buildShellLaunchCommand) with elevated shell access, trying
+     * ShellManager → Shizuku → Root in that order — the same fallback chain
+     * AppUtils.resizeTask uses for its own shell commands. Unlike
+     * resizeTask's own "am task resize"/"am task set-windowing-mode"
+     * commands, this one is NOT attempted via a plain unprivileged
+     * Runtime.exec("sh", "-c", ...) first: launching an Activity on a
+     * secondary display specifically needs elevated shell (uid=2000+) or
+     * root — a normal-uid `sh -c "am start --display N"` would just hit the
+     * same SecurityException this function exists to work around, so
+     * trying it first would only waste time before falling through anyway.
+     * Returns true if the command was actually sent through one of the
+     * three paths (not a guarantee the launch itself succeeded — `am
+     * start`'s own stdout/stderr isn't parsed here, matching resizeTask's
+     * same not-actually-checking-the-result approach for its two commands).
+     */
+    /**
+     * Finds the taskId of [packageName]'s currently running task, or -1 if
+     * it isn't running. Extracted as a shared helper — this same
+     * getRunningTasks(1)-then-match-topActivity pattern was previously
+     * duplicated inline at two other call sites in this file (the
+     * minimize-vs-restore toggle, and launchApp's cold-start resize fix)
+     * without either one being reusable for a third (closeTask's own need
+     * for this same lookup, added alongside this function).
+     */
+    private fun findRunningTaskId(packageName: String): Int {
+        val runningTasks = activityManager.getRunningTasks(1)
+        return runningTasks.firstOrNull()
+            ?.takeIf { it.topActivity?.packageName == packageName }
+            ?.id ?: -1
+    }
+
+    private fun tryLaunchViaShell(shellCmd: String): Boolean {
+        try {
+            val shell = com.youki.dex.server.ShellManager
+            if (shell.isAvailable) {
+                shell.execSync(shellCmd)
+                return true
+            }
+        } catch (e: Exception) {}
+
+        try {
+            val shizuku = ShizukoManager.getInstance(this)
+            if (shizuku.hasPermission) {
+                shizuku.runShellSync(shellCmd)
+                return true
+            }
+        } catch (e: Exception) {}
+
+        return try {
+            DeviceUtils.runAsRoot(shellCmd)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun launchApp(
@@ -1632,7 +1896,91 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             if (newInstance)
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
 
-            context.startActivity(launchIntent, options.toBundle())
+            // GitHub issue #15: ActivityOptions.setLaunchDisplayId (used by
+            // makeActivityOptions above, in `options`) throws
+            // SecurityException from ActivityTaskManagerService on a
+            // secondary display the caller doesn't own — a signature-level
+            // permission (INTERNAL_SYSTEM_WINDOW/ADD_TRUSTED_DISPLAY) a
+            // normal app can't hold, no matter how correct the launch
+            // bounds are. AppUtils.buildShellLaunchCommand already existed
+            // for exactly this (same `am start --display` pattern
+            // AppUtils.resizeTask uses for `am task resize`, running as
+            // shell/root instead of this app's own uid) but was never
+            // actually called from here — this app's own reported crash was
+            // reachable through the one code path that didn't use it yet.
+            // Falls back to the normal startActivity() below if no shell
+            // access is available, rather than silently failing to launch
+            // the app at all.
+            if (displayId != Display.DEFAULT_DISPLAY && packageName != null) {
+                val shellCmd = AppUtils.buildShellLaunchCommand(
+                    context, packageName, launchMode, dockHeight, displayId
+                )
+                if (shellCmd.isNotEmpty() && tryLaunchViaShell(shellCmd)) {
+                    return
+                }
+                // No shell access, or the command failed — fall through to
+                // startActivity() below. It will very likely hit the same
+                // SecurityException on a real secondary display, but this
+                // preserves the previous behavior for anyone who somehow
+                // had it "working" some other way rather than introducing a
+                // new silent no-op.
+            }
+
+            // See AppUtils.isAppProcessRunning's own doc comment for the
+            // full explanation. Short version: ActivityOptions'
+            // setLaunchBounds/setLaunchWindowingMode above are unreliable
+            // specifically on a cold start (no existing process) — the
+            // system briefly creates the new Task at a default size before
+            // the requested freeform bounds take effect, so "Maximized"
+            // (or any non-standard mode) can silently open at roughly
+            // half-screen the very first time an app is launched. This
+            // check must run BEFORE startActivity, since startActivity is
+            // what creates the process this function checks for.
+            val wasAlreadyRunning = packageName != null &&
+                AppUtils.isAppProcessRunning(this@DockService, packageName)
+
+            // FIX: startActivity() had no error handling at all — on a slow
+            // device (user report: BLU M10L Pro, 3GB RAM, Unisoc T310) a
+            // launch can fail partway through at the system level (OOM
+            // kill, ANR during Task creation, transient
+            // ActivityNotFoundException/SecurityException) without
+            // startActivity() itself throwing anything synchronously. The
+            // function used to just fall through and run the rest of
+            // launchApp() (pinning, orientation lock, etc.) as if the
+            // launch had succeeded, leaving an empty/half-created Task
+            // behind — which is exactly what shows up in Recent Apps as a
+            // transparent window with just the wallpaper and the app's
+            // icon overlaid (no first frame was ever drawn into it, so the
+            // system falls back to its default empty-task representation).
+            try {
+                context.startActivity(launchIntent, options.toBundle())
+            } catch (e: Exception) {
+                // ActivityNotFoundException, SecurityException, or any
+                // other launch-time failure — surface it instead of
+                // silently proceeding as if nothing went wrong, and skip
+                // the resize-retry below since there's no Task to resize.
+                android.util.Log.e("DockService", "launchApp failed for $packageName: ${e.message}")
+                Toast.makeText(
+                    this@DockService,
+                    getString(R.string.something_wrong),
+                    Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+
+            if (!wasAlreadyRunning && packageName != null && launchMode != "fullscreen") {
+                // 400ms: long enough for the system to finish creating the
+                // Task on a genuine cold start (150ms was already the gap
+                // AppUtils.resizeTask uses between its own two shell
+                // commands, set-windowing-mode then resize — see that
+                // function — so 400ms here is a deliberately larger margin
+                // for the slower "new process + new Task" case specifically,
+                // not just "switch windowing mode on an existing Task").
+                // Not a fixed fix for every device/timing — see this
+                // change's own commit message for that caveat — but doing
+                // nothing left the bug fully unaddressed.
+                checkTaskCreatedOrRetry(packageName, launchMode, attempt = 1)
+            }
         }
 
         if (appMenuVisible)
@@ -1657,6 +2005,54 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             toggleNotificationPanel(false)
     }
 
+    /**
+     * Confirms a just-launched app actually got a Task on top of the stack,
+     * resizing it once found — retries once more before giving up rather
+     * than reporting failure after a single check.
+     *
+     * FIX: the first version of this check only tried once at 400ms and
+     * showed an error Toast immediately if no Task was found yet. On a slow
+     * device (user report: BLU M10L Pro, 3GB RAM) a perfectly normal launch
+     * can easily take longer than 400ms end to end, so that single check
+     * was a false-positive machine — reporting "failed to open" for apps
+     * that were just... still loading. [attempt] 1 checks at 400ms and
+     * retries; [attempt] 2 checks at a further 800ms (1200ms total from
+     * launch) and only then reports failure — long enough to cover a slow
+     * cold start without still reporting real failures (crash,
+     * OOM-killed process) so late the user's already moved on.
+     */
+    private fun checkTaskCreatedOrRetry(packageName: String, launchMode: String, attempt: Int) {
+        val delayMs = if (attempt == 1) 400L else 800L
+        dockHandler.postDelayed({
+            val runningTasks = activityManager.getRunningTasks(1)
+            val taskId = runningTasks.firstOrNull()
+                ?.takeIf { it.topActivity?.packageName == packageName }
+                ?.id ?: -1
+            when {
+                taskId != -1 -> AppUtils.resizeTask(context, launchMode, taskId, dockHeight)
+                attempt == 1 -> checkTaskCreatedOrRetry(packageName, launchMode, attempt = 2)
+                else -> {
+                    // Both checks failed — this is the "app completely
+                    // fails to open" half of the user report, distinct from
+                    // launchApp's own startActivity try/catch (that one
+                    // catches startActivity() itself throwing; this catches
+                    // it returning normally but the system never actually
+                    // finishing Task creation, e.g. the new process getting
+                    // OOM-killed a moment later on a 3GB-RAM device).
+                    // Nothing to resize, and silently doing nothing here is
+                    // exactly the "app just didn't open, with no
+                    // explanation" behavior being reported — so tell the
+                    // user plainly instead.
+                    Toast.makeText(
+                        this@DockService,
+                        getString(R.string.something_wrong),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }, delayMs)
+    }
+
     private fun setOrientation() {
         val lockLandscape = sharedPreferences.getBoolean("lock_landscape", true)
         DeviceUtils.freezeRotation(lockLandscape)
@@ -1664,7 +2060,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             if (lockLandscape)
                 ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        windowManager.updateViewLayout(dock, dockLayoutParams)
+        safeUpdateViewLayout(dock, dockLayoutParams)
     }
 
     private fun toggleAppMenu() {
@@ -1705,8 +2101,6 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 deviceHeight - dockHeight - dockMargin - DeviceUtils.getStatusBarHeight(context) - margins
         if (sharedPreferences.getBoolean("app_menu_fullscreen", false)) {
             layoutParams = Utils.makeWindowParams(-1, usableHeight + margins, context, secondary, fitNavInsets = true)
-            // لما الدوك فوق: القائمة تبدأ بعد الدوك مباشرة (y من الأعلى)
-            // لما الدوك تحت: القائمة فوق الدوك (y من الأسفل)
             layoutParams.y = dockHeight + dockMargin
             if (sharedPreferences.getInt("dock_layout", -1) != 0) {
                 val padding = Utils.dpToPx(context, 24)
@@ -1733,7 +2127,6 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 context, secondary, fitNavInsets = true
             )
             layoutParams.x = margins
-            // لما الدوك فوق: y من الأعلى بعد الدوك مباشرة
             layoutParams.y = dockMargin + dockHeight + margins
             appsGv.layoutManager = GridLayoutManager(
                 context,
@@ -1773,10 +2166,10 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 false
             )
         ) Gravity.CENTER_HORIZONTAL else Gravity.START
-        // لما الدوك فوق: القائمة تنزل من تحت الدوك (Gravity.TOP)
-        // لما الدوك تحت: القائمة تطلع فوق الدوك (Gravity.BOTTOM)
-        val verticalGravity = Gravity.BOTTOM
-        layoutParams.gravity = verticalGravity or halign
+        // App menu anchors to whichever edge (top or bottom) the dock is docked to.
+        val menuDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+        val satelliteGravity = com.youki.dex.utils.DockPositionUtils.satelliteGravity(menuDockPosition)
+        layoutParams.gravity = satelliteGravity or halign
         // درج التطبيقات يتبع لون الفقاعة مباشرة
         // ✅ نفس لون الدوك بالضبط
         ColorUtils.applyMainColor(this, sharedPreferences, appMenu)
@@ -1868,17 +2261,18 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         // نلغي أي removeView معلّق من hide سابق
         appMenu.removeCallbacks(hideMenuRunnable)
         // ── Android/Pixel Enter: أنيميشن أندرويد الأصلي — scale + fade من الشريط ──
-
         val enterTransY = Utils.dpToPx(context, 12).toFloat()
         appMenu.alpha = 0f
         appMenu.scaleX = 0.92f
         appMenu.scaleY = 0.92f
-        // لما الدوك فوق: القائمة تنزل من الأعلى ← translationY سالب
-        // لما الدوك تحت: القائمة تطلع من الأسفل ← translationY موجب
-        appMenu.translationY = enterTransY
         appMenu.pivotX = appMenu.width / 2f
-        // المحور: فوق الـ view لما الدوك فوق، تحته لما الدوك تحت
-        appMenu.pivotY = appMenu.height.toFloat()
+        if (menuDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP) {
+            appMenu.translationY = -enterTransY
+            appMenu.pivotY = 0f
+        } else {
+            appMenu.translationY = enterTransY
+            appMenu.pivotY = appMenu.height.toFloat()
+        }
         appMenu.animate()
             .alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
             .setDuration(300)
@@ -1907,17 +2301,22 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         // ✅ ANIM: setListener(null) قبل cancel — يمنع onAnimationCancel يشتغل ويخرب الحالة
         appMenu.animate().setListener(null).cancel()
         // ── Android/Pixel Exit: يرجع للشريط (اتجاه عكسي حسب موضع الدوك) ──
-
         val exitTransY = Utils.dpToPx(context, 10).toFloat()
+        val exitDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
         appMenu.pivotX = appMenu.width / 2f
-        appMenu.pivotY = appMenu.height.toFloat()
-        appMenu.animate()
+        val exitAnim = appMenu.animate()
             .alpha(0f).scaleX(0.92f).scaleY(0.92f)
-            .translationY(exitTransY)
             .setDuration(200)
             .setInterpolator(interpExit)
             .setListener(null)
-            .start()
+        if (exitDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP) {
+            appMenu.pivotY = 0f
+            exitAnim.translationY(-exitTransY)
+        } else {
+            appMenu.pivotY = appMenu.height.toFloat()
+            exitAnim.translationY(exitTransY)
+        }
+        exitAnim.start()
         // ✅ إزالة القائمة بعد انتهاء الأنيميشن — postDelayed بدل AnimatorListenerAdapter
         // removeCallbacks في showAppMenu يلغي هذا لو فُتحت القائمة قبل انتهاء الـ 180ms
         appMenu.postDelayed(hideMenuRunnable, 180)
@@ -1956,7 +2355,6 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             withContext(Dispatchers.Main) {
                 val menuFullscreen = sharedPreferences.getBoolean("app_menu_fullscreen", false)
                 val phoneLayout = sharedPreferences.getInt("dock_layout", -1) == 0
-                //TODO: Implement efficient adapter
                 val existingAdapter = appsGv.adapter
                 if (existingAdapter is AppAdapter && !recreateAdapter) {
                     existingAdapter.updateApps(apps)
@@ -1975,13 +2373,9 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         // Cast to DockApp to access tasks for snap/close actions
         val dockApp = app as? com.youki.dex.models.DockApp
         val view = LayoutInflater.from(context).inflate(R.layout.task_list, null)
-        val layoutParams = Utils.makeWindowParams(-2, -2, context, secondary, fitNavInsets = true)
+        val layoutParams = makeContextMenuParams()
         ColorUtils.applyMainColor(context, sharedPreferences, view)
         layoutParams.gravity = Gravity.START or Gravity.TOP
-        layoutParams.flags =
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         val location = IntArray(2)
         anchor.getLocationOnScreen(location)
         layoutParams.x = location[0]
@@ -2112,6 +2506,23 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                     loadPinnedApps()
                     updateRunningTasks()
                     removePopup(view)
+                } else if (action.text == getString(R.string.remove_from_dock)) {
+                    AppUtils.unpinApp(context, app.packageName, AppUtils.DOCK_PINNED_LIST)
+                    loadPinnedApps()
+                    updateRunningTasks()
+                    removePopup(view)
+                } else if (action.text == getString(R.string.close)) {
+                    val taskId = findRunningTaskId(app.packageName)
+                    if (taskId != -1) {
+                        AppUtils.closeTask(context, taskId)
+                        // Same 400ms cold-start-safe delay pattern
+                        // launchApp uses for its own post-launch task
+                        // lookup — here it's just giving `am task remove`
+                        // time to actually finish before the dock refreshes
+                        // its running-apps list, rather than racing it.
+                        dockHandler.postDelayed({ updateRunningTasks(true) }, 400)
+                    }
+                    removePopup(view)
                 } else if (action.text == getString(R.string.standard)) {
                     removePopup(view)
                     launchApp("standard", app.packageName, null, app, newInstance = true)
@@ -2195,7 +2606,16 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         val layoutParams = Utils.makeWindowParams(-2, -2, context, secondary, fitNavInsets = true)
         view.setBackgroundResource(R.drawable.round_rect)
         ColorUtils.applyMainColor(context, sharedPreferences, view)
-        layoutParams.gravity = Gravity.BOTTOM or Gravity.START
+        // FIX: this always anchored to the bottom of the screen, assuming
+        // a bottom dock — for a top dock, the menu needs to drop down
+        // below the dock instead, or it opens far away at the opposite
+        // edge of the screen instead of right next to the tapped icon.
+        val ctxMenuDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+        if (ctxMenuDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP) {
+            layoutParams.gravity = Gravity.TOP or Gravity.START
+        } else {
+            layoutParams.gravity = Gravity.BOTTOM or Gravity.START
+        }
         layoutParams.flags =
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -2249,15 +2669,53 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         addPopup(view, layoutParams)
     }
 
-    // FIX (Lifecycle): Track all floating popup windows so we can clean them up
+    // Bug fix — Lifecycle. Track all floating popup windows so we can clean them up
     // properly in onDestroy(). Without this, popups can outlive their creator and
     // cause "View not attached to window manager" crashes or ghost windows.
     private val activePopups = mutableListOf<View>()
 
     /** Add a popup to WindowManager and track it for proper lifecycle cleanup */
+    /**
+     * Safe wrapper around windowManager.addView().
+     * WHY THIS EXISTS: SYSTEM_ALERT_WINDOW ("display over other apps") can be
+     * revoked by the user at any moment while the service is running — not
+     * just checked once at startup. If that happens, every subsequent
+     * addView() throws WindowManager.BadTokenException and crashes the
+     * process. Before this fix, ~10 call sites across the file called
+     * addView() directly with no guard at all.
+     * Returns true if the view was actually added.
+     */
+    private fun safeAddView(view: View, params: WindowManager.LayoutParams): Boolean {
+        if (!Settings.canDrawOverlays(this)) return false
+        return try {
+            if (view.windowToken == null) windowManager.addView(view, params)
+            true
+        } catch (e: Exception) {
+            // BadTokenException (permission revoked mid-session) or
+            // IllegalStateException (view already added) — either way,
+            // nothing left for the caller to safely do here.
+            false
+        }
+    }
+
+    /**
+     * Safe wrapper around windowManager.updateViewLayout().
+     * WHY THIS EXISTS: throws IllegalArgumentException if the view is not
+     * currently attached (e.g. it was removed by a concurrent close/cleanup
+     * path, or the permission was revoked and the view was never re-added).
+     * Several call sites (dock resize/theme/orientation updates) can fire
+     * from timers or config-change callbacks that don't know the current
+     * attachment state.
+     */
+    private fun safeUpdateViewLayout(view: View, params: WindowManager.LayoutParams) {
+        if (view.windowToken == null) return
+        try {
+            windowManager.updateViewLayout(view, params)
+        } catch (e: Exception) { /* view detached between the check and the call — ignore */ }
+    }
+
     private fun addPopup(view: View, params: WindowManager.LayoutParams) {
-        windowManager.addView(view, params)
-        activePopups.add(view)
+        if (safeAddView(view, params)) activePopups.add(view)
     }
 
     /** Remove a popup from WindowManager and stop tracking it */
@@ -2284,8 +2742,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
      *
      * This helper builds consistent params for all dismissible context menus.
      */
-    private fun makeContextMenuParams(): WindowManager.LayoutParams {
-        val p = Utils.makeWindowParams(-2, -2, context, secondary)
+    private fun makeContextMenuParams(fitNavInsets: Boolean = true): WindowManager.LayoutParams {
+        val p = Utils.makeWindowParams(-2, -2, context, secondary, fitNavInsets = fitNavInsets)
         p.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or   // ← was missing
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
@@ -2302,6 +2760,18 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             || preference == "dock_background_alpha"
 )
             applyTheme()
+        // FIX (user report — "the dock doesn't update live, you have to
+        // restart it"): dock_position (top/bottom/left/right) was read
+        // correctly by recomputeDockShape()/updateDockShape() — the
+        // function that actually lays out and positions the dock window —
+        // but wasn't wired up here, so changing it from Settings silently
+        // did nothing until the dock happened to be recreated some other
+        // way (e.g. toggling round_dock right after, or restarting the
+        // service). It affects the dock's shape/position/rotation the same
+        // way round_dock already does, so it goes through the same
+        // updateDockShape() path.
+        else if (preference == "dock_position")
+            updateDockShape()
         else if (preference == "menu_icon_uri")
             updateMenuIcon()
         else if (preference.startsWith("icon_")) {
@@ -2379,19 +2849,199 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
      * 1.15: Improved display switching
      * يُستدعى لما تُضاف شاشة أو تُحذف → يُعيد بناء context + dock على الشاشة الصح
      */
+    /**
+     * Shows the live wallpaper on the secondary display via [Presentation],
+     * if one is attached and nothing is showing there yet. See
+     * SecondaryDisplayWallpaperPresentation's doc comment for why this is a
+     * separate Presentation rather than relying on WallpaperService itself
+     * (Android doesn't support per-display wallpapers — GitHub issue #15).
+     */
+    private fun startSecondaryDisplayWallpaperIfNeeded() {
+        if (secondaryDisplayPresentation != null) return // already showing
+        val display = DeviceUtils.getSecondaryDisplay(this) ?: return
+        try {
+            secondaryDisplayPresentation =
+                com.youki.dex.livewallpaper.service.SecondaryDisplayWallpaperPresentation(this, display)
+                    .also { it.show() }
+        } catch (e: Exception) {
+            // Display could disappear between the null-check above and show()
+            // (race with a hot-unplug), or the platform could refuse the
+            // Presentation for some OEM-specific reason — either way, fail
+            // quietly and let the next onDisplayAdded retry.
+            secondaryDisplayPresentation = null
+        }
+    }
+
+    /** Tears down the secondary-display wallpaper Presentation, if one is showing. */
+    private fun stopSecondaryDisplayWallpaper() {
+        secondaryDisplayPresentation?.let {
+            try { it.dismiss() } catch (e: Exception) {}
+        }
+        secondaryDisplayPresentation = null
+    }
+
+    /** Shows the virtual-mouse cursor on the secondary display, if one is attached. */
+    private fun startCursorOverlayIfNeeded() {
+        if (cursorOverlay?.isShowing == true) {
+            broadcastCursorStatus(true)
+            return
+        }
+        cursorOverlay = com.youki.dex.utils.CursorOverlayManager.forSecondaryDisplay(this)
+            ?.also { it.show() }
+        // .show() has its own internal try/catch and silently leaves the
+        // manager in a not-showing state on failure (missing overlay
+        // permission, display detached mid-call, etc.) — check isShowing
+        // rather than just "cursorOverlay != null" so TrackpadActivity
+        // gets told the truth, not just "a manager object exists".
+        broadcastCursorStatus(cursorOverlay?.isShowing == true)
+    }
+
+    /** Removes the virtual-mouse cursor, if one is showing. */
+    private fun stopCursorOverlay() {
+        cursorOverlay?.dismiss()
+        cursorOverlay = null
+        broadcastCursorStatus(false)
+    }
+
+    /**
+     * Tells TrackpadActivity whether drags/taps on it will currently
+     * actually do anything in DIRECT mode. Sent whenever availability
+     * changes (start/stop above) and once immediately in response to
+     * ACTION_QUERY_CURSOR_STATUS, so a freshly-opened TrackpadActivity
+     * doesn't have to guess — the two also-broken cases this closes:
+     * accessibility service was never enabled (cursorOverlay stays null
+     * forever, nothing ever calls startCursorOverlayIfNeeded/stop to
+     * "announce" that), and mid-session disconnect while the phone screen
+     * was already accepting drags.
+     */
+    private fun broadcastCursorStatus(available: Boolean) {
+        sendBroadcast(
+            Intent(DOCK_SERVICE_ACTION).setPackage(packageName)
+                .putExtra("action", ACTION_CURSOR_STATUS)
+                .putExtra(EXTRA_CURSOR_AVAILABLE, available)
+        )
+    }
+
+    /** Moves the virtual-mouse cursor by a relative delta from a TrackpadActivity drag. */
+    private fun moveCursorBy(dx: Int, dy: Int) {
+        cursorOverlay?.moveBy(dx, dy)
+    }
+
+    /**
+     * Simulates a click at the cursor's current position on the secondary
+     * display via AccessibilityService.dispatchGesture() — the cursor
+     * overlay itself is FLAG_NOT_TOUCHABLE (purely visual), so this is the
+     * only way to actually interact with whatever is under it.
+     *
+     * [kind]:
+     *  - "left"   → a single short tap
+     *  - "right"  → a long-press (600ms) — touchscreens conventionally use
+     *               this as the secondary/context-menu action, there's no
+     *               direct touch equivalent of a physical right button
+     *  - "double" → two short taps back-to-back, exactly like a real
+     *               double-click is physically two presses, not one
+     *               longer or different gesture. Dispatched as two
+     *               separate dispatchGesture() calls (not one
+     *               GestureDescription with two strokes) so each tap is
+     *               indistinguishable from a real one to whatever app is
+     *               listening for double-tap.
+     */
+    private fun dispatchCursorClick(kind: String) {
+        val overlay = cursorOverlay ?: return
+        when (kind) {
+            "double" -> {
+                dispatchSingleTap(overlay.x, overlay.y, TAP_DURATION_MS)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    dispatchSingleTap(overlay.x, overlay.y, TAP_DURATION_MS)
+                }, DOUBLE_TAP_GAP_MS)
+            }
+            "right" -> dispatchSingleTap(overlay.x, overlay.y, LONG_PRESS_DURATION_MS)
+            else -> dispatchSingleTap(overlay.x, overlay.y, TAP_DURATION_MS)
+        }
+    }
+
+    private fun dispatchSingleTap(x: Int, y: Int, durationMs: Long) {
+        val path = android.graphics.Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+        val stroke = android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, durationMs)
+        val gesture = android.accessibilityservice.GestureDescription.Builder().addStroke(stroke).build()
+        try {
+            dispatchGesture(gesture, null, null)
+        } catch (e: Exception) {
+            // canPerformGestures could be false on a stale accessibility_service.xml
+            // the user hasn't re-granted after an app update — fail quietly
+            // rather than crash the whole dock service over a missed click.
+        }
+    }
+
     private fun refreshForDisplayChange() {
         try {
             val newSecondary = sharedPreferences.getBoolean("prefer_last_display", false)
-            val newContext = DeviceUtils.getDisplayContext(this, newSecondary)
-            context = newContext
-            windowManager = context.getSystemService(android.view.WindowManager::class.java)
+            if (newSecondary == secondary) {
+                // Nothing to move — same display as before, this call was
+                // triggered by some other display property changing (e.g.
+                // resolution) rather than a display being added/removed.
+                // Falls through to the existing per-frame layout recompute
+                // below, same as before this fix.
+            } else {
+                // GitHub issue #15 ("prefer secondary screens" bugs — icons
+                // duplicated, apps opening on the wrong screen, HDMI not
+                // working at all): this used to only reassign the
+                // `windowManager` field itself and call updateViewLayout()
+                // on the dock. That does NOT move a View between
+                // WindowManager instances — a View added via
+                // oldWindowManager.addView() stays owned by that same
+                // WindowManager object forever; updateViewLayout() can only
+                // resize/reposition it within the display it already
+                // belongs to. Reassigning the field just meant every
+                // *subsequent* addView() call (audio panel, power menu,
+                // notification panel, etc.) went to the new display while
+                // the dock/corners/handle already on screen stayed stuck on
+                // the old one — which is exactly "duplicated icons" (old
+                // dock still visible on one display, new popups appearing
+                // on the other) and "HDMI doesn't work" (nothing ever
+                // actually left the primary display) as reported.
+                val oldWindowManager = windowManager
+                secondary = newSecondary
+                context = DeviceUtils.getDisplayContext(this, newSecondary)
+                // FIX: getSystemService(Class) returns WindowManager? (nullable
+                // by its own official signature) but the windowManager field
+                // is declared non-null (`lateinit var windowManager:
+                // WindowManager`) — assigning the nullable result directly is
+                // a compile error (type mismatch), meaning this exact
+                // reassignment could never have actually built. Falling back
+                // to the WINDOW_SERVICE string-key lookup + cast (same
+                // pattern the field's own initial assignment uses elsewhere
+                // in this class) if the typed lookup somehow comes back null,
+                // rather than crashing display-switch entirely over it.
+                windowManager = context.getSystemService(android.view.WindowManager::class.java)
+                    ?: (context.getSystemService(WINDOW_SERVICE) as WindowManager)
+
+                // Remove from the OLD WindowManager first — removeView on a
+                // WindowManager that doesn't own the view throws
+                // IllegalArgumentException, so this must use
+                // oldWindowManager specifically, not the just-reassigned
+                // `windowManager` field.
+                for (view in listOf(dock, topRightCorner, bottomRightCorner, dockHandle)) {
+                    try { oldWindowManager.removeView(view) } catch (e: Exception) {}
+                }
+                // Re-add through the NEW WindowManager, using each view's
+                // existing LayoutParams object (already correctly sized —
+                // recomputeDockHeight()/recomputeDockShape() below update
+                // them in place, same objects, same reasoning as
+                // onConfigurationChanged's existing single-atomic-update
+                // pattern this function already followed).
+                safeAddView(dock, dockLayoutParams)
+                safeAddView(topRightCorner, cornersLayoutParams)
+                safeAddView(bottomRightCorner, cornersLayoutParams)
+                safeAddView(dockHandle, handleLayoutParams)
+            }
             // FIX: single atomic updateViewLayout() — see the comment in
             // onConfigurationChanged for why calling updateDockHeight() then
             // updateDockShape() back to back could visibly stretch the dock
             // for a frame.
             recomputeDockHeight()
             recomputeDockShape()
-            windowManager.updateViewLayout(dock, dockLayoutParams)
+            safeUpdateViewLayout(dock, dockLayoutParams)
             applyTheme()
             updateNavigationBar()
             updateQuickSettings()
@@ -2415,7 +3065,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
     private fun updateDockHeight() {
         recomputeDockHeight()
         // Fix: always update layout regardless of pin state
-        windowManager.updateViewLayout(dock, dockLayoutParams)
+        safeUpdateViewLayout(dock, dockLayoutParams)
     }
 
     private fun placeRunningApps() {
@@ -2562,9 +3212,15 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 } else if (useShizukuDetection && shizuku.hasPermission) {
                     // ── Shizuku متاح: نقدر نعرف التطبيق النشط الحقيقي + التطبيقات
                     // الشغالة بالخلفية بدون قيود getRunningTasks() على التطبيقات
-                    // العادية. أول شي نجيب قائمة الاستخدام الأخير كأساس (عشان
-                    // الأيقونات والأسماء)، وبعدين نصحح currentApp من dumpsys ──
-                    val recent = AppUtils.getRecentTasks(context, nApps)
+                    // العادية. أول شي نجرب نجيب المهام الحقيقية عبر
+                    // getTasksViaShizuku (تشمل freeform/multi-window تطبيقات
+                    // ما تظهر بـ getRunningTasks() العادية)؛ لو فشلت أو رجعت
+                    // فاضية (صلاحية سُحبت بعد الفحص أعلاه، خطأ بتفسير
+                    // مخرجات `am stack list` على ROM معيّن، إلخ) نرجع لقائمة
+                    // الاستخدام الأخير getRecentTasks كـ fallback — نفس
+                    // السلوك القديم قبل هذا التحسين ──
+                    val viaShizuku = AppUtils.getTasksViaShizuku(context, packageManager, nApps)
+                    val recent = viaShizuku ?: AppUtils.getRecentTasks(context, nApps)
                     shizuku.getForegroundPackage()?.let { fg ->
                         if (fg.isNotEmpty() && fg != packageName &&
                             fg != AppUtils.getCurrentLauncher(packageManager)
@@ -2572,18 +3228,18 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                             AppUtils.currentApp = fg
                         }
                     }
-                    // FIX (dock only showed one app as "running" no matter how
-                    // many are actually open): "recent" above is a 24h *usage
-                    // history* list (see getRecentTasks's own kdoc — it's
-                    // deliberately "recently used", not "currently running"),
-                    // and until now Shizuku was only ever used to correct
-                    // which ONE of those apps gets the foreground/bold-line
+                    // Bug fix — dock only showed one app as "running" no matter how
+                    // many are actually open. "recent" above is a 24h *usage
+                    // history* list when we fell back to getRecentTasks (see its
+                    // own kdoc — deliberately "recently used", not "currently
+                    // running"), and until now Shizuku was only ever used to
+                    // correct which ONE of those apps gets the foreground/bold-line
                     // style — nothing checked whether the rest of that
                     // history list were actually still alive in the
                     // background, so every icon with any task always drew
                     // some indicator regardless of real liveness.
                     //
-                    // The icon list itself stays the full history list
+                    // The icon list itself stays the full history/task list
                     // (getRunningPackages() is deliberately NOT used to
                     // filter fetchedTasks here) — recently-used apps should
                     // stay visible in the dock even once closed, just
@@ -2633,7 +3289,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 tasks = fetchedTasks
 
 
-                // Let RecyclerView size itself naturally
+                // Let RecyclerView size itself naturally along its scroll axis (width, always horizontal now).
                 tasksGv.layoutParams?.width = ViewGroup.LayoutParams.WRAP_CONTENT
                 val adapter = tasksGv.adapter
                 if (adapter is DockAppAdapter && !recreateAdapter)
@@ -2641,9 +3297,9 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 else
                     tasksGv.adapter = DockAppAdapter(context, apps, this@DockService, iconPackUtils, dockHeight)
 
-                // TODO: wifiManager.isWifiEnabled is deprecated on API 29+ — use WifiManager.isWifiEnabled
-                // via ConnectivityManager on future refactor. Suppressed for now: no safe alternative
-                // that works on all API levels without requesting location permission.
+                // NOTE: WifiManager.isWifiEnabled is deprecated on API 29+, but there is
+                // no safe alternative that works on all API levels without requesting
+                // location permission — this is a deliberate, permanent choice, not a gap.
                 @Suppress("DEPRECATION")
                 wifiBtn.setImageResource(
                     if (wifiManager.isWifiEnabled) R.drawable.ic_wifi_on else R.drawable.ic_wifi_off)
@@ -2687,7 +3343,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         // the end applies the fully-computed final state in one atomic step.
         recomputeDockHeight()
         recomputeDockShape()
-        windowManager.updateViewLayout(dock, dockLayoutParams)
+        safeUpdateViewLayout(dock, dockLayoutParams)
         // FIX: Re-apply theme on ANY config change (orientation, uiMode dark/light,
         // density). Without this, colors stay stale when night mode or display
         // settings change at runtime. applyTheme() uses 'this' (live service context)
@@ -2697,6 +3353,23 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
     }
 
     /** Computes dockLayoutParams.width/gravity/y from the round_dock preference — does NOT call updateViewLayout(); see onConfigurationChanged. */
+    /**
+     * Re-orients the dock's actual layout between horizontal (row, for a
+     * top/bottom dock) and vertical (column, for a left/right dock) —
+     * matching how Windows' taskbar behaves when docked to a side edge:
+     * icons/buttons stay upright, only their arrangement and the dock's
+     * own alignment within its RelativeLayout change.
+     *
+     * Three top-level LinearLayout groups sit inside dock_layout
+     * (nav_panel, center_group, system_tray), each with its own nested
+     * LinearLayout "pill" groups (action_btns_group, nav_btns_group,
+     * status_area) — every one of them needs both its `orientation` and
+     * its RelativeLayout alignment (start/end ↔ top/bottom) flipped
+     * together, or the pieces would end up correctly stacked internally
+     * but positioned in the wrong part of a vertical dock (e.g. nav_panel
+     * still glued to the left edge of a dock that's now running down the
+     * right edge of the screen).
+     */
     private fun recomputeDockShape() {
         val isRound  = sharedPreferences.getBoolean("round_dock", false)
 
@@ -2714,6 +3387,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             DeviceUtils.getSecondaryDisplay(context)?.displayId ?: Display.DEFAULT_DISPLAY
         else
             Display.DEFAULT_DISPLAY
+        val dockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+
         // FIX: was DeviceUtils.getDisplayMetrics().widthPixels, which reports
         // the RAW physical display width (via currentWindowMetrics.bounds) —
         // including areas under display cutouts/rounded corners/side bars
@@ -2749,19 +3424,67 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         }
 
         if (isRound) {
+            // GitHub issue #15 ("prefer secondary screens: when activating
+            // rounded corners on the dock, it also causes some bugs, the
+            // icons are all placed on both the right and left"): this
+            // branch computed width from getUsableDisplayWidth() (which
+            // already subtracts left+right insets combined) but never
+            // compensated for an ASYMMETRIC inset (insets.left != insets.right
+            // — common on external/secondary displays with an off-center
+            // cutout or camera). Gravity.CENTER_HORIZONTAL centers the view
+            // within the full raw display width, not the usable area, so an
+            // asymmetric inset pushed the dock off-center — the reported
+            // "icons on both the right and left" gap. The non-round branch
+            // below already computes leftInset for exactly this reason;
+            // reuse the same logic here and fold it into the centering x.
+            val displayContext = DeviceUtils.getDisplayContext(context, secondary)
+            val leftInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                try {
+                    val insetWm = displayContext.getSystemService(WINDOW_SERVICE) as WindowManager
+                    insetWm.currentWindowMetrics.windowInsets.getInsetsIgnoringVisibility(
+                        android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+                    ).left
+                } catch (e: Throwable) { 0 }
+            } else 0
             dockLayoutParams.width   = safeDisplayWidth - 2 * margin
-            dockLayoutParams.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            dockLayoutParams.gravity =
+                com.youki.dex.utils.DockPositionUtils.dockGravity(dockPosition, centered = true)
+            dockLayoutParams.x       = leftInset
             dockLayoutParams.y       = margin
         } else {
+            // Discord report ("The dock isn't covering the left area and is
+            // cut off" — CMF Phone 2 Pro, Android 16): MATCH_PARENT +
+            // Gravity.START previously relied on x defaulting to 0 with no
+            // explicit compensation for a left-side inset/cutout, unlike
+            // the round-dock branch above, which already computes usable
+            // width (and implicitly centers around any asymmetric insets)
+            // via getUsableDisplayWidth. On a device where the system
+            // reports a nonzero left inset (a cutout, punch-hole camera
+            // area, or gesture-nav edge reservation this particular device/
+            // Android 16 build treats differently), x=0 could sit partly
+            // under that inset instead of starting exactly at the usable
+            // area's left edge — same "not covering the left area" this
+            // report described.
+            val displayContext = DeviceUtils.getDisplayContext(context, secondary)
+            val leftInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                try {
+                    val insetWm = displayContext.getSystemService(WINDOW_SERVICE) as WindowManager
+                    insetWm.currentWindowMetrics.windowInsets.getInsetsIgnoringVisibility(
+                        android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+                    ).left
+                } catch (e: Throwable) { 0 }
+            } else 0
             dockLayoutParams.width   = WindowManager.LayoutParams.MATCH_PARENT
-            dockLayoutParams.gravity = Gravity.BOTTOM or Gravity.START
+            dockLayoutParams.gravity =
+                com.youki.dex.utils.DockPositionUtils.dockGravity(dockPosition, centered = false)
+            dockLayoutParams.x       = leftInset
             dockLayoutParams.y       = 0
         }
     }
 
     private fun updateDockShape() {
         recomputeDockShape()
-        windowManager.updateViewLayout(dock, dockLayoutParams)
+        safeUpdateViewLayout(dock, dockLayoutParams)
     }
 
     private fun updateNavigationBar() {
@@ -2956,8 +3679,6 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         launchApp("freeform", null, Intent(Settings.ACTION_WIFI_SETTINGS))
     }
 
-    private fun toggleWifi() = toggleWifiDirect() // backward compat
-
     /** يرجع true لو نقطة اللمسة تقع فوق الـ view المعطى (بالإحداثيات المطلقة للشاشة) */
     private fun isTouchOnView(view: View, event: android.view.MotionEvent): Boolean {
         if (view.visibility != View.VISIBLE) return false
@@ -2965,75 +3686,6 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         view.getLocationOnScreen(loc)
         return event.rawX >= loc[0] && event.rawX <= loc[0] + view.width &&
                event.rawY >= loc[1] && event.rawY <= loc[1] + view.height
-    }
-
-    private fun toggleVolume() {
-        if (!audioPanelVisible) showAudioPanel() else hideAudioPanel()
-    }
-
-    private fun hideAudioPanel() {
-        if (!audioPanelVisible || audioPanel == null) return
-        audioPanelVisible = false
-        val panelToRemove = audioPanel
-        audioPanel = null
-        try { windowManager.removeView(panelToRemove) } catch (e: Exception) {}
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun showAudioPanel() {
-        //  guard — prevents stacking multiple menus on rapid volume button press
-        if (audioPanelVisible) return
-        audioPanelVisible = true
-
-        if (Utils.notificationPanelVisible)
-            toggleNotificationPanel(false)
-
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        val layoutParams = Utils.makeWindowParams(
-            Utils.dpToPx(context, 340), -2, context,
-            secondary, fitNavInsets = true
-        )
-        layoutParams.flags =
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or   // FIX: prevent audio panel from blocking taps outside its bounds
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        // FIX: when round_dock=true the dock floats 8dp above the screen bottom edge.
-        // Add that margin so the audio panel sits above the dock instead of behind it.
-        val floatMargin = if (sharedPreferences.getBoolean("round_dock", false))
-            Utils.dpToPx(context, 8) else 0
-        layoutParams.y = Utils.dpToPx(context, 2) + dockHeight + floatMargin
-        layoutParams.x = Utils.dpToPx(context, 2)
-        layoutParams.gravity = Gravity.BOTTOM or Gravity.END
-        audioPanel = LayoutInflater.from(ContextThemeWrapper(context, R.style.AppTheme_Dock))
-            .inflate(R.layout.audio_panel, null) as LinearLayout
-        audioPanel?.setOnTouchListener(null)
-        val musicIcon = audioPanel?.findViewById<ImageView>(R.id.ap_music_icon)
-        val musicSb = audioPanel?.findViewById<SeekBar>(R.id.ap_music_sb)
-        musicSb?.max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        musicSb?.progress = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        musicSb?.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0)
-            }
-            override fun onStartTrackingTouch(p1: SeekBar) {}
-            override fun onStopTrackingTouch(p1: SeekBar) {}
-        })
-        // Audio panel — same color as dock background (mainColor from user's theme)
-        val dockColors = ColorUtils.getMainColors(sharedPreferences, context)
-        audioPanel?.setBackgroundResource(R.drawable.btn_bubble_audio)
-        audioPanel?.background?.setColorFilter(dockColors[0], android.graphics.PorterDuff.Mode.SRC_ATOP)
-        audioPanel?.background?.alpha = dockColors[1]
-        musicIcon?.clearColorFilter()
-        // Slider color: Material You primary when material_u theme, white otherwise
-        val isMatU = sharedPreferences.getString("theme", "material_u") == "material_u"
-        val sliderCol = if (isMatU && com.google.android.material.color.DynamicColors.isDynamicColorAvailable()) {
-            ColorUtils.getThemeColors(context, true)[0]
-        } else {
-            android.graphics.Color.WHITE
-        }
-        musicSb?.progressDrawable?.setColorFilter(sliderCol, android.graphics.PorterDuff.Mode.SRC_ATOP)
-        musicSb?.thumb?.setColorFilter(sliderCol, android.graphics.PorterDuff.Mode.SRC_ATOP)
-        windowManager.addView(audioPanel, layoutParams)
     }
 
     private fun showPowerMenu() {
@@ -3048,12 +3700,13 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         ).inflate(R.layout.power_menu, null) as LinearLayout
         com.youki.dex.utils.AppFontScaleUtils.applyToViewHierarchy(powerMenu)
 
-        // FIX: explicit 240dp width — WRAP_CONTENT on WindowManager can stretch on DEX
+        val powerMenuDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+        val powerMenuSatelliteGravity = com.youki.dex.utils.DockPositionUtils.satelliteGravity(powerMenuDockPosition)
         val layoutParams = Utils.makeWindowParams(Utils.dpToPx(context, 240), -2, context, secondary)
         layoutParams.flags = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH)
-        layoutParams.gravity = Gravity.BOTTOM or Gravity.START
+        layoutParams.gravity = powerMenuSatelliteGravity or Gravity.START
         layoutParams.x = Utils.dpToPx(context, 8)
         layoutParams.y = dockHeight + Utils.dpToPx(context, 8)
 
@@ -3085,7 +3738,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             com.youki.dex.App.cancelRestartAlarm(context)
             com.youki.dex.App.intentionalShutdown = true
             restorePhoneDisplaySettings()
-            // FIX ("إغلاق التطبيق حرفيًا مازال يبقى يشتغل" — Close DEX left the
+            // Previously broken ("إغلاق التطبيق حرفيًا مازال يبقى يشتغل" — Close DEX left the
             // process alive): disableSelf() (the previous fix here) only
             // tears down THIS AccessibilityService (DockService itself) —
             // it does nothing to NotificationService (a separate
@@ -3215,12 +3868,14 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             }
         }
 
-        // FIX: set initial state BEFORE addView to prevent 1-frame jump
-        powerMenu!!.translationY = Utils.dpToPx(context, 16).toFloat()
+        // Animation direction matches the edge the power menu is anchored to.
+        val powerMenuTransDist = Utils.dpToPx(context, 16).toFloat()
         powerMenu!!.alpha = 0f
-        windowManager.addView(powerMenu, layoutParams)
+        powerMenu!!.translationY = if (powerMenuDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP)
+            -powerMenuTransDist else powerMenuTransDist
+        safeAddView(powerMenu!!, layoutParams)
 
-        // Animate: slide up + fade in
+        // Animate: slide in from the dock's edge + fade in
         powerMenu!!.animate().translationY(0f).alpha(1f).setDuration(180).start()
     }
 
@@ -3306,15 +3961,20 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         powerMenuLastClosedAt = System.currentTimeMillis()
         val menuToRemove = powerMenu
         powerMenu = null
-        // ✅ ANIM: انيميشن إغلاق — يطير لفوق مع fade out
+        // ✅ ANIM: انيميشن إغلاق — اتجاه يتبع موضع الدوك (نفس منطق showPowerMenu)
         menuToRemove?.animate()?.setListener(null)?.cancel()
-        menuToRemove?.animate()
-            ?.translationY(-Utils.dpToPx(context, 10).toFloat())
+        val exitDist = Utils.dpToPx(context, 10).toFloat()
+        val exitPos = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+        val exitAnim = menuToRemove?.animate()
             ?.alpha(0f)
             ?.setDuration(140)
             ?.setInterpolator(android.view.animation.AccelerateInterpolator(2f))
             ?.withEndAction { try { windowManager.removeView(menuToRemove) } catch (e: Exception) {} }
-            ?.start()
+        if (exitPos == com.youki.dex.utils.DockPositionUtils.Position.TOP)
+            exitAnim?.translationY(exitDist)
+        else
+            exitAnim?.translationY(-exitDist)
+        exitAnim?.start()
     }
 
     /**
@@ -3496,10 +4156,17 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
     }
 
     private fun updateHandlePositionValues() {
-        val position = sharedPreferences.getString("handle_position", "start")
-        handleLayoutParams.gravity =
-            Gravity.BOTTOM or if (position == "start") Gravity.START else Gravity.END
-        if (position == "end") {
+        // The dock handle (its show/collapse toggle) follows dock_position
+        // — it sits on the same screen edge the dock itself docks to.
+        // "handle_position" (start/end) controls its secondary alignment
+        // along that edge (left-vs-right for a top/bottom dock).
+        val dockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+        val secondaryStart = sharedPreferences.getString("handle_position", "start") == "start"
+        handleLayoutParams.gravity = if (dockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP)
+            Gravity.TOP or if (secondaryStart) Gravity.START else Gravity.END
+        else
+            Gravity.BOTTOM or if (secondaryStart) Gravity.START else Gravity.END
+        if (!secondaryStart) {
             dockHandle.setBackgroundResource(R.drawable.dock_handle_bg_end)
             dockHandle.setCompoundDrawablesRelativeWithIntrinsicBounds(
                 R.drawable.ic_expand_left,
@@ -3520,7 +4187,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
     private fun updateHandlePosition() {
         updateHandlePositionValues()
-        windowManager.updateViewLayout(dockHandle, handleLayoutParams)
+        safeUpdateViewLayout(dockHandle, handleLayoutParams)
     }
 
     private fun toggleNotificationPanel(show: Boolean) {
@@ -3567,11 +4234,28 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                     if (Build.VERSION.SDK_INT >= 31) {
                         shizuku.runShell("wm set-multi-window-config --freeformWindowManagement true") {}
                     }
-                    // FIX Android 15 (API 35): Desktop Windowing Mode — بدون هذا الأمر
-                    // التطبيقات تُفتح بدون caption bar (شريط العنوان وأزرار الإغلاق/تغيير الحجم)
-                    // ويصير الـ freeform window أشبه بـ fullscreen بدون تحكم.
-                    // الأمر يفعّل desktop mode الذي يُظهر الـ caption bar الحقيقي.
-                    if (Build.VERSION.SDK_INT == 35) {
+                    // FIX: Desktop Windowing Mode was gated to `== 35` (Android
+                    // 15 only) — without these commands, apps open in freeform
+                    // WITHOUT a caption bar (title bar + close/resize buttons),
+                    // making the freeform window act like fullscreen with no
+                    // way to actually drag/move it (resize still works, since
+                    // that goes through `am task resize` directly — see
+                    // AppUtils.resizeTask — independent of the caption bar).
+                    // User report: BLU M10L Pro, Android 12/13, confirms this
+                    // — window resize worked but window movement was
+                    // completely broken, a regression from an older version
+                    // that (going by user reports) had working movement on
+                    // this same class of device. `== 35` meant this fix,
+                    // written for Android 15's desktop windowing rollout,
+                    // silently never ran on the vast majority of real freeform
+                    // devices still on 12/13/14. Widened to match
+                    // --freeformWindowManagement's own `>= 31` threshold right
+                    // above — these `wm` commands already fail silently
+                    // (empty {} callback, no exception surfaced) on any
+                    // OEM/API combination that doesn't recognize them, so
+                    // broadening this is a pure upside: helps every device
+                    // where the flags exist and does nothing where they don't.
+                    if (Build.VERSION.SDK_INT >= 31) {
                         shizuku.runShell("wm set-multi-window-config --supportsDesktopWindowing true") {}
                         shizuku.runShell("wm set-multi-window-config --enableDesktopMode true") {}
                     }
@@ -3591,7 +4275,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         serviceScope.cancel() // Cancel all running coroutines to prevent leaks
         castManager?.destroy()
         DeviceUtils.hideStatusBar(this, false)
-        // FIX (stuck in landscape until Force Stop): freezeRotation(true) is
+        // Previously broken (stuck in landscape until Force Stop): freezeRotation(true) is
         // called every time an app is launched with lock_landscape enabled
         // (see launchApp()/toggleAppMenu() call sites), but nothing was ever
         // calling freezeRotation(false) — that system-level rotation lock
@@ -3608,6 +4292,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         displayListener?.let {
             (getSystemService(DISPLAY_SERVICE) as? DisplayManager)?.unregisterDisplayListener(it)
         }
+        stopSecondaryDisplayWallpaper()
+        stopCursorOverlay()
         // Unregister all receivers
         try { launcherReceiver?.let { unregisterReceiver(it) } } catch (e: Exception) {}
         try { dockActionReceiver?.let { unregisterReceiver(it) } } catch (e: Exception) {}
@@ -3620,15 +4306,14 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         if (::soundEventsReceiver.isInitialized)
             try { unregisterReceiver(soundEventsReceiver) } catch (e: Exception) {}
         stopResourceMonitor()
-        // FIX (Lifecycle): Remove all tracked popup windows first so nothing
+        // Fix for Lifecycle: Remove all tracked popup windows first so nothing
         // outlives the service. Then remove core windows in order.
         cleanupAllPopups()
         qsPanel?.let { try { windowManager.removeView(it) } catch (e: Exception) {} }
-        audioPanel?.let { try { windowManager.removeView(it) } catch (e: Exception) {} }
         powerMenu?.let { try { windowManager.removeView(it) } catch (e: Exception) {} }
-        // FIX ("إغلاق الديكس ما بيقتل كل العمليات" / overlay stays up): appMenu
+        // Previously broken ("إغلاق الديكس ما بيقتل كل العمليات" / overlay stays up): appMenu
         // is its own top-level window (windowManager.addView at showAppMenu),
-        // separate from dock/powerMenu/qsPanel/audioPanel — it was never in
+        // separate from dock/powerMenu/qsPanel — it was never in
         // this cleanup list at all. If the App Menu happened to be open when
         // Close DEX was tapped, that window had nothing left owning it (the
         // whole service was gone) but was never actually removed from
@@ -3675,11 +4360,17 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             panelToClose.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             panelToClose.pivotX = panelToClose.width.toFloat()
             panelToClose.pivotY = panelToClose.height.toFloat()
-            panelToClose.animate()
+            val closeDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+            val closeTransPx = com.youki.dex.utils.Utils.dpToPx(context, 8).toFloat()
+            val closeAnimator = panelToClose.animate()
                 .scaleX(0.92f).scaleY(0.92f).alpha(0f)
-                .translationY(com.youki.dex.utils.Utils.dpToPx(context, 8).toFloat())
                 .setDuration(200)
                 .setInterpolator(interpExit)
+            if (closeDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP)
+                closeAnimator.translationY(-closeTransPx)
+            else
+                closeAnimator.translationY(closeTransPx)
+            closeAnimator
                 .setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: android.animation.Animator) {
                         try { windowManager.removeView(panelToClose) } catch (e: Exception) {}
@@ -3750,8 +4441,10 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         }
 
         val layoutParams = Utils.makeWindowParams(-2, -2, context, secondary, fitNavInsets = true)
-        // لما الدوك فوق: البانيل يطلع من تحت الدوك (TOP gravity)
-        // لما الدوك تحت: البانيل يطلع فوق الدوك (BOTTOM gravity)
+        // Feature request: QS panel keeps its fixed corner (bottom-end) —
+        // its *position* never follows dock_position, only its show/hide
+        // animation direction does (below), per explicit request: "فقط
+        // حركه الانيميشن تبعه ولا تحرك زواياه... خليه في الزاويه الاصليه".
         layoutParams.gravity = Gravity.BOTTOM or Gravity.END
         layoutParams.y = dockHeight + Utils.dpToPx(context, 4)
         layoutParams.x = Utils.dpToPx(context, 8)
@@ -3759,19 +4452,24 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         panel.setOnTouchListener(null)
+        // Animation direction follows dock_position even though the panel's
+        // own corner doesn't move — a top dock makes the panel animate in
+        // from the top instead of always from the bottom.
+        val qsDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
         // FIX: set initial state BEFORE addView to prevent 1-frame jump
-        val qsPanelTransY = Utils.dpToPx(context, 10).toFloat()
+        val qsPanelTransPx = Utils.dpToPx(context, 10).toFloat()
         panel.scaleX = 0.92f
         panel.scaleY = 0.92f
         panel.alpha = 0f
-        panel.translationY = qsPanelTransY
+        panel.translationY = if (qsDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP)
+            -qsPanelTransPx else qsPanelTransPx
         panel.pivotX = panel.width.toFloat()
         panel.pivotY = panel.height.toFloat()
         panel.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        windowManager.addView(panel, layoutParams)
+        safeAddView(panel, layoutParams)
         panel.animate().cancel()
         panel.animate()
-            .scaleX(1f).scaleY(1f).alpha(1f).translationY(0f)
+            .scaleX(1f).scaleY(1f).alpha(1f).translationX(0f).translationY(0f)
             .setDuration(300)
             .setInterpolator(interpEmphasized)
             .setListener(object : AnimatorListenerAdapter() {
@@ -3785,76 +4483,6 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                     qsPanelAnimating = false
                 }
             }).start()
-    }
-    private fun showLauncherPicker() {
-        // Fetch all installed launchers
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        val launchers = packageManager.queryIntentActivities(intent, 0)
-            .filter { it.activityInfo.packageName != packageName } // Exclude YoukiDEX itself
-
-        if (launchers.isEmpty()) {
-            Toast.makeText(context, "No other launcher found", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val view = LayoutInflater.from(context).inflate(R.layout.task_list, null)
-        val layoutParams = Utils.makeWindowParams(-2, -2, context, secondary, fitNavInsets = true)
-        layoutParams.gravity = Gravity.CENTER
-        layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-
-        val actionsLv = view.findViewById<android.widget.ListView>(R.id.tasks_lv)
-        val actions = ArrayList<com.youki.dex.models.Action>()
-        launchers.forEach { info ->
-            val label = info.loadLabel(packageManager).toString()
-            actions.add(com.youki.dex.models.Action(R.drawable.ic_launch_mode, label))
-        }
-
-        try { ColorUtils.applyMainColor(context, sharedPreferences, view) } catch (e: Exception) {}
-
-        view.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_OUTSIDE) removePopup(view)
-            false
-        }
-
-        actionsLv.adapter = com.youki.dex.adapters.AppActionsAdapter(context, actions)
-        actionsLv.setOnItemClickListener { _, _, position, _ ->
-            val selectedInfo = launchers[position]
-            removePopup(view)
-
-            // Fully hide YoukiDEX before opening launcher
-            try { dock.visibility = android.view.View.GONE } catch (e: Exception) {}
-            try { unpinDock() } catch (e: Exception) {}
-            // Hide notification bar
-            sendBroadcast(Intent(com.youki.dex.services.DOCK_SERVICE_ACTION)
-                .setPackage(packageName)
-                .putExtra("action", com.youki.dex.services.ACTION_HIDE_NOTIFICATION_BAR))
-
-            val launchIntent = Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_HOME)
-                .setPackage(selectedInfo.activityInfo.packageName)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            try {
-                context.startActivity(launchIntent)
-            } catch (e: Exception) {
-                // If failed, restore dock
-                dock.visibility = android.view.View.VISIBLE
-                Toast.makeText(context, "Failed to open app", Toast.LENGTH_SHORT).show()
-            }
-
-            // Re-show dock when user returns to YoukiDEX
-            dockHandler.postDelayed({
-                if (dock.windowToken != null) {
-                    dock.visibility = android.view.View.VISIBLE
-                    sendBroadcast(Intent(com.youki.dex.services.DOCK_SERVICE_ACTION)
-                        .setPackage(packageName)
-                        .putExtra("action", com.youki.dex.services.ACTION_SHOW_NOTIFICATION_BAR))
-                }
-            }, 1000)
-        }
-
-        addPopup(view, layoutParams)
     }
 
     private fun getCpuUsage(): Int {
@@ -4037,15 +4665,22 @@ class NotificationService : NotificationListenerService(), OnNotificationClickLi
         // The notification layout must clear this gap or it renders behind the floating dock.
         val dockFloatMargin = if (sharedPreferences.getBoolean("round_dock", false))
             Utils.dpToPx(context, 8) else 0
+        // FIX: this used to assume the dock is always at the bottom
+        // ("لما الدوك تحت: الإشعار يظهر فوق الدوك") — for a top dock the
+        // notification panel needs to drop down below the dock instead of
+        // sitting at the bottom of the screen, far from the dock.
+        val notifDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
         y = run {
-            // لما الدوك تحت: الإشعار يظهر فوق الدوك
-            (if (DeviceUtils.shouldApplyNavbarFix())
-                dockHeight - DeviceUtils.getNavBarHeight(context)
+            if (notifDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP) {
+                dockHeight + dockFloatMargin + margins
+            } else if (DeviceUtils.shouldApplyNavbarFix())
+                dockHeight - DeviceUtils.getNavBarHeight(context) + dockFloatMargin + margins
             else
-                dockHeight) + dockFloatMargin + margins
+                dockHeight + dockFloatMargin + margins
         }
         notificationLayoutParams.x = margins
-        val notifVertGravity = Gravity.BOTTOM
+        val notifVertGravity = if (notifDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP)
+            Gravity.TOP else Gravity.BOTTOM
         notificationLayoutParams.gravity = notifVertGravity or if (sharedPreferences.getInt(
                 "dock_layout",
                 -1
@@ -4402,7 +5037,13 @@ class NotificationService : NotificationListenerService(), OnNotificationClickLi
             Utils.dpToPx(context, 400), -2, context,
             preferLastDisplay, fitNavInsets = true
         )
-        layoutParams.gravity = Gravity.BOTTOM or Gravity.END
+        // FIX: this panel (Quick Settings, image 3 in the bug report) was
+        // always anchored to Gravity.BOTTOM regardless of dock position —
+        // for a top dock it needs to drop down from the top instead, to
+        // actually sit next to the dock rather than at the opposite edge.
+        val qsPanelDockPosition = com.youki.dex.utils.DockPositionUtils.get(sharedPreferences)
+        layoutParams.gravity = (if (qsPanelDockPosition == com.youki.dex.utils.DockPositionUtils.Position.TOP)
+            Gravity.TOP else Gravity.BOTTOM) or Gravity.END
         layoutParams.y = y
         layoutParams.x = margins
         layoutParams.flags =
@@ -4673,7 +5314,7 @@ class NotificationService : NotificationListenerService(), OnNotificationClickLi
                 applyBtVisual(!nowOn)
                 v.subtitle.visibility = android.view.View.GONE
 
-                // FIX (race condition): hideNotificationPanel() used to be called
+                // Bug fix — race condition. hideNotificationPanel() used to be called
                 // unconditionally right after kicking off enable()/disable(), so
                 // the panel's 160ms dismiss animation would start (and the panel
                 // View would be removed) before the async Bluetooth toggle had
@@ -5345,7 +5986,16 @@ class NotificationService : NotificationListenerService(), OnNotificationClickLi
         val slideIn = Utils.dpToPx(context, 18).toFloat()
         notificationPanel!!.translationY = slideIn
         notificationPanel!!.alpha = 0f
-        windowManager.addView(notificationPanel, layoutParams)
+        // safeAddView() is a private DockService helper and isn't visible here;
+        // NotificationService owns its own windowManager, so add directly
+        // (guarded the same way safeAddView guards its own addView call).
+        if (notificationPanel!!.windowToken == null) {
+            try {
+                windowManager.addView(notificationPanel!!, layoutParams)
+            } catch (e: Exception) {
+                // BadTokenException / IllegalStateException — nothing safe to do here
+            }
+        }
         // ANIM: entry animation
         notificationPanel!!.animate()
             .translationY(0f).alpha(1f)
@@ -5649,23 +6299,7 @@ class DockTileService : TileService() {
                 )
             }
         } else {
-            sendBroadcast(
-                Intent(DOCK_SERVICE_ACTION)
-                    .setPackage(packageName)
-                    .putExtra("action", "disable_self")
-            )
-            val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-            val launchers = packageManager.queryIntentActivities(homeIntent, 0)
-                .filter { it.activityInfo.packageName != packageName }
-            val target = launchers.firstOrNull()
-            if (target != null) {
-                launchActivity(
-                    Intent(Intent.ACTION_MAIN)
-                        .addCategory(Intent.CATEGORY_HOME)
-                        .setPackage(target.activityInfo.packageName)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                )
-            }
+            AppUtils.stopDexAndLaunchOtherHome(this@DockTileService) { intent -> launchActivity(intent) }
         }
         updateTile()
     }

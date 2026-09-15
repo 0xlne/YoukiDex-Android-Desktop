@@ -193,7 +193,6 @@
     <string name="recent_apps">Aplicativos recentes</string>
     <string name="remember_launch_mode_summary">Lembrar o último modo de inicialização usado para cada app</string>
     <string name="properties">Propriedades</string>
-    <string name="file_manager">Gerenciador de arquivos</string>
     <string name="app_music_title">Música</string>
     <string name="force_stop_dex">Forçar parada</string>
     <string name="prop_name">Nome</string>
@@ -617,7 +616,6 @@
     <string name="disable_heads_up_summary">Desativa os pop-ups de notificação do Android</string>
     <string name="performance_mode_colon">Modo de desempenho: %1$s</string>
     <string name="min_value_1hz">O valor mínimo permitido é 1 Hz</string>
-    <string name="lw_fps_limit">Limite de FPS</string>
     <string name="theme_title">Tema do Dock</string>
     <string name="compressed_colon">Compactado: %1$s</string>
     <string name="app_terminal_title">Terminal</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Bem-vindo ao Youki DEX</string>
     <string name="onboarding_welcome_body">Vamos configurar sua área de trabalho. Isso levará apenas um minuto.</string>
-    <string name="onboarding_renderer_title">Escolha seu renderizador</string>
-    <string name="onboarding_renderer_description">Vulkan é mais recente e pode ser mais rápido em alguns dispositivos, mas nem todos os dispositivos se beneficiam igualmente — a qualidade do suporte varia. OpenGL ES é a escolha segura e compatível que funciona bem em quase qualquer lugar. Você pode mudar isso a qualquer momento nas Configurações avançadas.</string>
-    <string name="onboarding_renderer_auto">Automático</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Informações do renderizador indisponíveis no momento</string>
-    <string name="onboarding_renderer_change_later_note">Você pode mudar isso a qualquer momento nas Configurações avançadas.</string>
     <string name="onboarding_permissions_title">Mais uma coisa</string>
     <string name="onboarding_permissions_body">Conceder acesso ao Shizuku permite que a área de trabalho seja iniciada diretamente, sem avisos extras. Você pode pular isso e conceder depois nas Configurações.</string>
     <string name="onboarding_skip_warning">Sem isso, a área de trabalho pedirá permissões da forma normal sempre que precisar delas — isso também é totalmente normal, apenas um fluxo diferente.</string>

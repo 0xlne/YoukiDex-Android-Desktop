@@ -38,35 +38,4 @@ object OnboardingPrefs {
         PreferenceManager.getDefaultSharedPreferences(context).edit()
             .putBoolean(KEY_ONBOARDING_COMPLETE, complete).apply()
     }
-
-    /**
-     * Which rendering backend (OpenGL ES vs Vulkan) the live wallpaper engine uses.
-     * See OnboardingRendererChoiceFragment (Step 5) and the equivalent Advanced Settings
-     * screen — both write here. Per the project decision, this choice is made directly by
-     * the user (a plain textual explanation, no live preview) rather than by any
-     * benchmark/heuristic the app runs itself, since Vulkan support quality varies too
-     * much device-to-device for a simple version check to be trustworthy.
-     *
-     * Stored as the plain String name of RendererBackend (AUTO/GLES/VULKAN) rather than an
-     * ordinal Int, so the stored value stays meaningful/debuggable if the enum is ever
-     * reordered — matches how KEY_SPLASH_VIDEO_URI stores a URI string rather than some
-     * more compact encoding, for the same "don't over-optimize a rarely-read preference"
-     * reasoning.
-     */
-    enum class RendererBackend { AUTO, GLES, VULKAN }
-
-    fun getRendererBackend(context: Context): RendererBackend {
-        val stored = PreferenceManager.getDefaultSharedPreferences(context)
-            .getString(KEY_RENDERER_BACKEND, null)
-        return stored?.let {
-            try { RendererBackend.valueOf(it) } catch (e: IllegalArgumentException) { RendererBackend.AUTO }
-        } ?: RendererBackend.AUTO
-    }
-
-    fun setRendererBackend(context: Context, backend: RendererBackend) {
-        PreferenceManager.getDefaultSharedPreferences(context).edit()
-            .putString(KEY_RENDERER_BACKEND, backend.name).apply()
-    }
-
-    private const val KEY_RENDERER_BACKEND = "renderer_backend"
 }

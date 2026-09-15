@@ -63,7 +63,7 @@ class VideoEngine(private val context: Context) {
             setVideoSurface(outputSurface)
             repeatMode = Player.REPEAT_MODE_ONE   // the seamless loop we need
 
-            // FIX (no audio output at all on some devices): ExoPlayer without
+            // Bug fix — no audio output at all on some devices. ExoPlayer without
             // explicit AudioAttributes uses the default AudioFocus behavior
             // (handleAudioFocus=true), which is designed for regular "active"
             // apps. A WallpaperService isn't a foreground Activity, so the

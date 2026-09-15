@@ -7,7 +7,6 @@ import android.text.TextWatcher
 import android.text.Editable
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.widget.TextView
 import androidx.preference.PreferenceManager
 import androidx.core.content.edit

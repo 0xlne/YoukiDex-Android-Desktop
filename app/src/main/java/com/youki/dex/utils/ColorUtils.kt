@@ -17,9 +17,9 @@ import androidx.appcompat.R as AppCompatR
 import com.google.android.material.R as MaterialR
 import kotlin.math.roundToInt
 import androidx.core.graphics.toColorInt
-import androidx.core.graphics.get
 import androidx.core.content.withStyledAttributes
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.get
 
 object ColorUtils {
 
@@ -76,7 +76,6 @@ object ColorUtils {
         return colors
     }
 
-    //TODO: Use builtin
     fun manipulateColor(color: Int, factor: Float): Int {
         val a = Color.alpha(color)
         val r = (Color.red(color) * factor).roundToInt()

@@ -15,4 +15,10 @@
         android:hint="300"
         android:key="hot_corners_delay"
         android:title="@string/hot_corners_delay_title" />
+    <EditTextPreference
+        android:defaultValue="2"
+        android:hint="2"
+        android:key="hot_corners_width"
+        android:title="@string/hot_corners_width_title"
+        android:summary="@string/hot_corners_width_summary" />
 </PreferenceScreen>

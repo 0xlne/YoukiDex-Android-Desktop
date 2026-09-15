@@ -117,7 +117,6 @@
     <string name="tweak_touch_desc">iPhone जैसे अनुभव के लिए टच संवेदनशीलता में सुधार करें</string>
     <string name="vp_copied">कॉपी किया गया ✅</string>
     <string name="folder_name">फ़ोल्डर का नाम</string>
-    <string name="file_manager">फ़ाइल प्रबंधक</string>
     <string name="development_tools">विकास उपकरण</string>
     <string name="the_user">उपयोगकर्ता</string>
     <string name="extracting_ellipsis">निकाला जा रहा है...</string>
@@ -389,7 +388,6 @@
     <string name="developer_mode_already">डेवलपर मोड पहले से सक्षम है</string>
     <string name="activation_method">सक्रियण विधि</string>
     <string name="menu_icon_uri_title">मेनू आइकन</string>
-    <string name="lw_fps_limit">FPS सीमा</string>
     <string name="app_menu">ऐप मेनू</string>
     <string name="tap_to_diagnose">निदान के लिए टैप करें</string>
     <string name="shortcuts">शॉर्टकट…</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Youki DEX में आपका स्वागत है</string>
     <string name="onboarding_welcome_body">चलिए आपका डेस्कटॉप सेट करते हैं। इसमें बस एक मिनट लगेगा।</string>
-    <string name="onboarding_renderer_title">अपना रेंडरर चुनें</string>
-    <string name="onboarding_renderer_description">Vulkan नया है और कुछ डिवाइसों पर तेज़ हो सकता है, लेकिन हर डिवाइस को समान रूप से फ़ायदा नहीं होता — सपोर्ट क्वालिटी अलग-अलग होती है। OpenGL ES एक सुरक्षित, संगत विकल्प है जो लगभग हर जगह अच्छी तरह काम करता है। आप इसे कभी भी उन्नत सेटिंग्स से बदल सकते हैं।</string>
-    <string name="onboarding_renderer_auto">ऑटो</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">रेंडरर जानकारी अभी उपलब्ध नहीं है</string>
-    <string name="onboarding_renderer_change_later_note">आप इसे कभी भी उन्नत सेटिंग्स से बदल सकते हैं।</string>
     <string name="onboarding_permissions_title">एक और बात</string>
     <string name="onboarding_permissions_body">Shizuku एक्सेस देने से डेस्कटॉप बिना किसी अतिरिक्त प्रॉम्प्ट के सीधे शुरू हो सकता है। आप इसे छोड़ सकते हैं और बाद में सेटिंग्स से दे सकते हैं।</string>
     <string name="onboarding_skip_warning">इसके बिना, जब भी ज़रूरत होगी डेस्कटॉप सामान्य तरीके से अनुमतियाँ माँगेगा — यह भी पूरी तरह ठीक है, बस एक अलग तरीका है।</string>

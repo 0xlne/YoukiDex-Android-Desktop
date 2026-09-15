@@ -5,6 +5,7 @@
 	android:accessibilityFeedbackType="feedbackAllMask"
 	android:canRetrieveWindowContent="true"
     android:canRequestFilterKeyEvents="true"
+    android:canPerformGestures="true"
 	android:accessibilityFlags="flagRequestFilterKeyEvents|flagRetrieveInteractiveWindows"
     android:notificationTimeout="100"
     />

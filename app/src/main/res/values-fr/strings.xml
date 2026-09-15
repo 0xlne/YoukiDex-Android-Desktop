@@ -398,7 +398,6 @@
     <string name="inside_zip">Dans le ZIP</string>
     <string name="app_rec_title">Enregistreur d\'écran</string>
     <string name="favorites">Favoris</string>
-    <string name="file_manager">Gestionnaire de fichiers</string>
     <string name="swipe">Glisser/Survol</string>
     <string name="desktop_mode">Mode bureau</string>
     <string name="override_dock_background_opacity">Remplacer l\'opacité de l\'arrière-plan du Dock</string>
@@ -663,7 +662,6 @@
     <string name="root_required">Root requis</string>
     <string name="notification_access_required">Accès aux notifications requis</string>
     <string name="lw_flip_v">Retourner verticalement</string>
-    <string name="lw_fps_limit">Limite de FPS</string>
     <string name="lw_bg_color">Couleur d\'arrière-plan</string>
     <string name="n_files">%1$d fichiers</string>
     <string name="pin_startup">Épingler au démarrage</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Bienvenue sur Youki DEX</string>
     <string name="onboarding_welcome_body">Configurons votre bureau. Cela ne prendra qu\'une minute.</string>
-    <string name="onboarding_renderer_title">Choisissez votre moteur de rendu</string>
-    <string name="onboarding_renderer_description">Vulkan est plus récent et peut être plus rapide sur certains appareils, mais tous les appareils n\'en profitent pas également — la qualité du support varie. OpenGL ES est le choix sûr et compatible qui fonctionne bien presque partout. Vous pouvez changer cela à tout moment depuis les Paramètres avancés.</string>
-    <string name="onboarding_renderer_auto">Automatique</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Informations sur le moteur de rendu indisponibles pour l\'instant</string>
-    <string name="onboarding_renderer_change_later_note">Vous pouvez changer cela à tout moment depuis les Paramètres avancés.</string>
     <string name="onboarding_permissions_title">Une dernière chose</string>
     <string name="onboarding_permissions_body">Accorder l\'accès à Shizuku permet au bureau de démarrer directement, sans invites supplémentaires. Vous pouvez ignorer cela et l\'accorder plus tard depuis les Paramètres.</string>
     <string name="onboarding_skip_warning">Sans cela, le bureau demandera les autorisations de la manière habituelle chaque fois que nécessaire — c\'est tout à fait normal aussi, juste un flux différent.</string>

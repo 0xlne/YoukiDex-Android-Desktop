@@ -2,11 +2,9 @@ package com.youki.dex.activities
 
 import android.os.Bundle
 import android.view.MotionEvent
-import android.view.View
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat

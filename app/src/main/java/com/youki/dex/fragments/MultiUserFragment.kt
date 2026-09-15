@@ -5,10 +5,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.*
 import android.widget.ScrollView
 import android.widget.TextView
@@ -107,7 +105,7 @@ class MultiUserFragment : Fragment() {
                 refreshUsers()
                 notifyProfileUpdated()
             } else {
-                // FIX (removed the manual crop screen — CropAvatarActivity):
+                // Bug fix — removed the manual crop screen — CropAvatarActivity.
                 // that screen turned out to be a bad experience in practice
                 // (a black-circle-with-no-visible-confirm-button bug), so
                 // this goes back to an automatic center-square crop, applied

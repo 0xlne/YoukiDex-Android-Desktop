@@ -496,7 +496,6 @@
     <string name="delete_file_confirm_message">"%1$s" silinsin mi?</string>
     <string name="enable_qs_battery_title">Pil</string>
     <string name="workshop_no_results">Sonuç yok 😅\nFarklı bir arama terimi deneyin</string>
-    <string name="file_manager">Dosya yöneticisi</string>
     <string name="notifications_already_granted">Bildirimler zaten verildi</string>
     <string name="youki_dex_its_free_and_open_">Youki DEX ücretsiz ve açık kaynaklıdır. GitHub\'da katkıda bulunun</string>
     <string name="bubble_opacity_summary">Balonun şeffaflığını kontrol et (%100 = katı)</string>
@@ -711,7 +710,6 @@
     <string name="icon_blacklist">Simge kara listesi</string>
     <string name="charging_sound_enabled">Şarj sesi</string>
     <string name="perf_root_required">Bu özellik Root gerektirir</string>
-    <string name="lw_fps_limit">FPS sınırı</string>
     <string name="lock_device">Cihazı kilitle</string>
     <string name="lw_applied">Duvar kağıdı uygulandı</string>
     <string name="manage_permissions">İzinleri yönet</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Youki DEX\'e Hoş Geldiniz</string>
     <string name="onboarding_welcome_body">Masaüstünüzü kuralım. Bu sadece bir dakika sürecek.</string>
-    <string name="onboarding_renderer_title">Render motorunuzu seçin</string>
-    <string name="onboarding_renderer_description">Vulkan daha yeni ve bazı cihazlarda daha hızlı olabilir, ancak her cihaz eşit derecede fayda görmez — destek kalitesi değişkenlik gösterir. OpenGL ES, hemen her yerde iyi çalışan güvenli ve uyumlu bir seçenektir. Bunu istediğiniz zaman Gelişmiş Ayarlar\'dan değiştirebilirsiniz.</string>
-    <string name="onboarding_renderer_auto">Otomatik</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Render motoru bilgisi şu anda kullanılamıyor</string>
-    <string name="onboarding_renderer_change_later_note">Bunu istediğiniz zaman Gelişmiş Ayarlar\'dan değiştirebilirsiniz.</string>
     <string name="onboarding_permissions_title">Bir şey daha</string>
     <string name="onboarding_permissions_body">Shizuku erişimi vermek, masaüstünün ek istemler olmadan doğrudan başlamasını sağlar. Bunu atlayıp daha sonra Ayarlar\'dan verebilirsiniz.</string>
     <string name="onboarding_skip_warning">Bu olmadan, masaüstü ihtiyaç duyduğunda her seferinde normal şekilde izin isteyecektir — bu da tamamen normaldir, sadece farklı bir akıştır.</string>

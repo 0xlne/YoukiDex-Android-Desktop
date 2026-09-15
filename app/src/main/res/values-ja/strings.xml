@@ -589,7 +589,6 @@
     <string name="source_already_exists">サイトはすでに存在します</string>
     <string name="enable_qs_pin_title">ピン留め</string>
     <string name="sd_card">SDカード</string>
-    <string name="file_manager">ファイルマネージャー</string>
     <string name="without_permissions">権限なし</string>
     <string name="notification_access_message">YoukiDexが正しく機能するには、通知へのアクセスが必要です。有効にするためにリダイレクトされます。</string>
     <string name="folder_name_hint">フォルダ名</string>
@@ -600,7 +599,6 @@
     <string name="plugin_font_add">フォントを追加</string>
     <string name="enable_corner_bottom_right_title">右下の角</string>
     <string name="perf_fps_current">現在のレート</string>
-    <string name="lw_fps_limit">FPS制限</string>
     <string name="lw_muted">ミュート</string>
     <string name="youki_desktop_add_success">お気に入りに追加しました ✅</string>
     <string name="source_added_success">%1$sが追加されました</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Youki DEXへようこそ</string>
     <string name="onboarding_welcome_body">デスクトップを設定しましょう。1分ほどで完了します。</string>
-    <string name="onboarding_renderer_title">レンダラーを選択</string>
-    <string name="onboarding_renderer_description">Vulkanは新しく、一部の端末では高速な場合がありますが、すべての端末で同じように恩恵があるわけではなく、サポート品質はさまざまです。OpenGL ESはほぼどこでも安定して動作する、安全で互換性の高い選択肢です。この設定はいつでも詳細設定から変更できます。</string>
-    <string name="onboarding_renderer_auto">自動</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">現在レンダラー情報を取得できません</string>
-    <string name="onboarding_renderer_change_later_note">この設定はいつでも詳細設定から変更できます。</string>
     <string name="onboarding_permissions_title">もう一つだけ</string>
     <string name="onboarding_permissions_body">Shizukuへのアクセスを許可すると、追加のプロンプトなしでデスクトップが直接起動します。この手順はスキップして、後で設定から許可することもできます。</string>
     <string name="onboarding_skip_warning">これを設定しない場合、必要になるたびにデスクトップが通常の方法で権限を求めます — それも全く問題ありません、単に流れが異なるだけです。</string>

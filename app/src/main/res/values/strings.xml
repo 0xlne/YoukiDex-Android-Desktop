@@ -110,6 +110,8 @@
     <string name="fullscreen">Fullscreen</string>
     <string name="remember_launch_mode_title">Remember launch mode</string>
     <string name="remember_launch_mode_summary">Remember last launch mode used for every app</string>
+    <string name="require_double_click_apps_title">Require double-click to open apps</string>
+    <string name="require_double_click_apps_summary">Useful with a mouse. A single click does nothing while this is on — leave off if you mainly use touch</string>
     <string name="launch_games_fullscreen_title">Launch games in full screen</string>
     <string name="launch_games_fullscreen_summary">Launch apps detected as games in full screen by default</string>
     <string name="launch_new_instance_secondary_title">New window on secondary displays</string>
@@ -148,6 +150,8 @@
     <string name="enable_apps_btn_summary">You can still open/close the apps menu by swiping up/down on the dock</string>
     <string name="activation_method">Activation method</string>
     <string name="activation_method_summary">The method used to bring up the dock when hidden</string>
+    <string name="dock_hover_show_hide_title">Show/hide dock on mouse hover</string>
+    <string name="dock_hover_show_hide_summary">Automatically reveal the dock when the cursor hovers over its edge, and hide it when the cursor leaves. Turn off to keep the dock only responding to the activation method above</string>
     <string name="swipe">Swipe/Hover</string>
     <string name="handle">Handle</string>
     <string name="handle_opacity">Handle opacity</string>
@@ -162,6 +166,13 @@
     <string name="running_apps_number_title">Number of running/recent apps to show</string>
     <string name="max_running_apps_landscape">Max recent apps (landscape)</string>
     <string name="lock_landscape_title">Force Landscape Mode</string>
+    <string name="dock_position_category">Dock Position</string>
+    <string name="dock_position_title">Dock Position</string>
+    <string name="dock_position_summary">Tap to switch which edge of the screen the dock docks to.</string>
+    <string name="dock_position_current">Currently: %1$s. Tap to switch.</string>
+    <string name="dock_position_bottom">Bottom</string>
+    <string name="dock_position_top">Top</string>
+    <string name="hide_system_bars_title">Hide Status &amp; Navigation Bars</string>
     <string name="dock_shortcut_app_title">Dock Quick-Launch App</string>
     <string name="dock_shortcut_app_summary">App opened when you tap the shortcut button in the dock</string>
     <string name="enable_dock_shortcut_title">Show Quick-Launch Button in Dock</string>
@@ -171,6 +182,7 @@
     <string name="desktop_density_value_summary">DPI value applied when desktop mode is active (default: 200)</string>
     <string name="enable_dock_shortcut_summary">Adds a shortcut button next to the wallpaper button that opens your chosen app as a window</string>
     <string name="lock_landscape_summary">Always keep the screen in landscape orientation (recommended for desktop use)</string>
+    <string name="hide_system_bars_summary">Automatically hide the status and navigation bars in desktop mode. Turn off to keep them always visible.</string>
     <string name="max_running_apps_portrait">Max recent apps (portrait)</string>
     <string name="center_running_apps_title">Center running apps</string>
     <string name="dock_activation_area_title">Dock activation area</string>
@@ -242,6 +254,8 @@
     <string name="enable_corner_top_right_title">Top right corner</string>
     <string name="enable_corner_bottom_right_title">Bottom right corner</string>
     <string name="hot_corners_delay_title">Activation delay (in milliseconds)</string>
+    <string name="hot_corners_width_title">Trigger area width (in dp)</string>
+    <string name="hot_corners_width_summary">How wide the touch/hover strip is along the screen edge — larger values are easier to hit on big or desktop-class displays</string>
 
     <!-- Advanced page -->
     <string name="advanced">Advanced</string>
@@ -267,6 +281,8 @@
     <string name="disable_heads_up_summary">Disables Android\'s notification pop-ups</string>
 
     <string name="root_required">Root required</string>
+    <string name="settings_screen_unavailable">This settings screen isn\'t available on your device</string>
+    <string name="no_browser_available">No browser app found to open this link</string>
     <string name="enable_power_menu_title">Built in power menu</string>
     <string name="enable_power_menu_summary">Use a custom power menu instead of the system one</string>
     <string name="power_off">Power off</string>
@@ -313,7 +329,7 @@
     <string name="role_gf_developer">GF developer</string>
     <string name="about_project_github_summary">View source code on GitHub</string>
     <string name="about_version">Version</string>
-    <string name="about_version_value">3.0</string>
+    <string name="about_version_value">3.5</string>
     <string name="help_and_about">Help and about</string>
     <string name="a_launcher_for_android_x86_by_">A DeX mode launcher by Mr Youki</string>
     <string name="help">Help</string>
@@ -362,14 +378,10 @@ To uninstall, remove Device Administrator permission first.</string>
     <string name="favorites">Favorites</string>
     <string name="app_frozen">App frozen</string>
     <string name="remove">Remove</string>
+    <string name="remove_from_dock">Remove from dock</string>
 
     <!-- Desktop -->
     <string name="lets_start">Let\'s start</string>
-    <string name="desktop_grid_category">Grid</string>
-    <string name="desktop_grid_size_title">Grid size</string>
-    <string name="grid_columns_label">Columns (width)</string>
-    <string name="grid_rows_label">Rows (height)</string>
-    <string name="desktop_grid_size_summary">Columns × rows on the desktop. Default is 5 × 7.</string>
     <string name="widget_appearance_category">Widgets</string>
     <string name="widget_corner_style_title">Widget corner style</string>
     <string name="widget_corner_style_summary">Applies to new and existing widgets. Can be overridden per-widget from its long-press menu.</string>
@@ -648,7 +660,8 @@ To uninstall, remove Device Administrator permission first.</string>
     <string name="lw_contrast">Contrast</string>
     <string name="lw_saturation">Saturation</string>
     <string name="lw_performance_section">Performance</string>
-    <string name="lw_fps_limit">FPS Limit</string>
+    <string name="lw_max_fps">Max FPS</string>
+    <string name="lw_max_fps_uncapped">Uncapped</string>
     <string name="lw_playback_speed">Playback Speed</string>
     <string name="lw_audio_pitch">Audio Pitch</string>
     <string name="lw_muted">Mute Audio</string>
@@ -656,7 +669,6 @@ To uninstall, remove Device Administrator permission first.</string>
     <string name="lw_delete">Delete</string>
     <string name="lw_active_badge">Active</string>
 
-    <string name="file_manager">File Manager</string>
     <!-- ═══ Workshop (Phase 1) ═══ -->
     <string name="workshop_title">Workshop</string>
     <string name="workshop_search_hint">Search for wallpapers or fonts…</string>
@@ -832,7 +844,6 @@ To uninstall, remove Device Administrator permission first.</string>
     <string name="remove_from_desktop">Remove from desktop</string>
     <string name="swipe_left_right_to_exit">Swipe left or right to exit</string>
     <string name="easter_egg_no_media">We\'re sorry, but you didn\'t post any pictures or gifts so we could surprise you with them 🗿</string>
-    <string name="materialfiles_not_installed">MaterialFiles is not installed on this device</string>
     <string name="select_a_file">Select a file</string>
     <string name="confirm_n">Confirm (%1$d)</string>
     <string name="confirm_selection">Confirm selection</string>
@@ -1003,13 +1014,6 @@ To uninstall, remove Device Administrator permission first.</string>
     <!-- Onboarding wizard strings -->
     <string name="next">Next</string>
     <string name="done">Done</string>
-    <string name="onboarding_renderer_title">Choose your renderer</string>
-    <string name="onboarding_renderer_description">Vulkan is newer and can be faster on some devices, but not every device benefits equally — support quality varies. OpenGL ES is the safe, compatible choice that works well almost everywhere. You can change this anytime from Advanced Settings.</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Renderer info unavailable right now</string>
-    <string name="onboarding_renderer_auto">Auto</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_change_later_note">You can switch this at any time from Advanced Settings.</string>
     <string name="onboarding_ui_customization_title">Personalize the fun stuff</string>
     <string name="onboarding_ui_customization_description">Pick an image, video, or GIF from a link or your device — it\'ll show up on the loading screen and the hidden Easter egg. Totally optional.</string>
     <string name="onboarding_ui_customization_source_url">From a link</string>
@@ -1023,9 +1027,6 @@ To uninstall, remove Device Administrator permission first.</string>
     <string name="onboarding_ui_customization_selected_video">✓ Video selected</string>
     <string name="onboarding_ui_customization_selected_gif">✓ GIF selected</string>
     <string name="onboarding_ui_customization_skip_note">Skip this step and defaults will be used instead — you can always set this later from Advanced Settings.</string>
-    <string name="renderer_category_title">Rendering Engine</string>
-    <string name="renderer_backend_summary">Choose the graphics backend used for live wallpapers: Auto picks the best option for your device, OpenGL ES is the most compatible, Vulkan can be faster on supported devices.</string>
-    <string name="renderer_vulkan_info_title">Checking Vulkan support…</string>
     <string name="editor_category_title">Wallpaper Editor</string>
     <string name="editor_preview_scale_title">Preview size</string>
     <string name="editor_preview_scale_summary">How much of the editor\'s width the 16:9 preview takes up, as a percentage (40-100). Requires reopening the editor.</string>
@@ -1052,5 +1053,26 @@ To uninstall, remove Device Administrator permission first.</string>
     <string name="onboarding_support_report_issue">Found a bug or have an idea?</string>
     <string name="onboarding_support_report_issue_summary">Report it on GitHub or Discord</string>
     <string name="discord_is_faster_notice">btw. Beta updates, beta source code, drama, bug reports, and 3 AM debates about app icons all move faster on the Discord server — GitHub Issues is where bugs go to nap.</string>
+
+    <!-- OTG / UHID mode strings -->
+    <string name="uhid_category_title">OTG / USB HID Mode (scrcpy --otg)</string>
+    <string name="uhid_mode_title">Use Phone as USB Keyboard &amp; Mouse</string>
+    <string name="uhid_mode_summary">When connected to a PC via USB, the phone acts as a HID keyboard and mouse. Requires Shizuku or root. Equivalent to scrcpy --otg.</string>
+    <string name="uhid_open_trackpad">Open Trackpad</string>
+    <string name="uhid_open_trackpad_summary">Turn your phone screen into a touchpad for the connected PC (drag to move, tap the buttons to click).</string>
+
+    <!-- Trackpad screen strings -->
+    <string name="trackpad_title">Trackpad</string>
+    <string name="trackpad_back_cd">Back</string>
+    <string name="trackpad_surface_hint">Drag to move the cursor</string>
+    <string name="trackpad_left_click">Left Click</string>
+    <string name="trackpad_right_click">Right Click</string>
+    <string name="trackpad_status_connecting">Connecting…</string>
+    <string name="trackpad_status_connected">Connected</string>
+    <string name="trackpad_status_error">Not connected</string>
+    <string name="trackpad_mode_direct">This Screen</string>
+    <string name="trackpad_mode_otg">USB PC (OTG)</string>
+    <string name="trackpad_status_no_display">No screen connected</string>
+    <string name="trackpad_status_accessibility_needed">Enable YoukiDex\'s accessibility service first (Settings)</string>
 
 </resources>

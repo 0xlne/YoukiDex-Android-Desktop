@@ -203,17 +203,6 @@
         <item>sound</item>
         <item>auto_rotate</item>
     </string-array>
-    <string-array name="renderer_backend_entries">
-        <item>@string/onboarding_renderer_auto</item>
-        <item>@string/onboarding_renderer_gles</item>
-        <item>@string/onboarding_renderer_vulkan</item>
-    </string-array>
-
-    <string-array name="renderer_backend_values">
-        <item>AUTO</item>
-        <item>GLES</item>
-        <item>VULKAN</item>
-    </string-array>
 
     <!-- Editor preview aspect ratio options -->
     <string-array name="editor_preview_aspect_entries">

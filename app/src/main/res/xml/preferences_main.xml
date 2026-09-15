@@ -20,10 +20,6 @@
         android:icon="@drawable/ic_dock"
         android:fragment="com.youki.dex.fragments.DockPreferences"
         android:title="@string/dock" />
-	<com.youki.dex.preferences.PreferenceHeader
-        android:icon="@drawable/ic_desktop"
-        android:fragment="com.youki.dex.fragments.DesktopPreferences"
-        android:title="@string/desktop" />
     <com.youki.dex.preferences.PreferenceHeader
         android:icon="@drawable/ic_star"
         android:fragment="com.youki.dex.fragments.DefaultAppsPreferences"
@@ -56,10 +52,6 @@
         android:icon="@drawable/ic_search"
         app:fragment="com.youki.dex.fragments.WorkshopFragment"
         android:title="@string/workshop_title" />
-    <com.youki.dex.preferences.PreferenceHeader
-        android:key="open_file_manager"
-        android:icon="@drawable/ic_folder"
-        android:title="@string/file_manager" />
     <com.youki.dex.preferences.PreferenceHeader
         android:icon="@drawable/ic_advanced"
         android:fragment="com.youki.dex.fragments.AdvancedPreferences"

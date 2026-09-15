@@ -22,7 +22,7 @@ object DefaultSources {
             isCustom          = false
         ),
 
-        // FIX (unnecessary sites): LiveWall and WallpaperFlare were removed from the
+        // Resolved issue: unnecessary sites. LiveWall and WallpaperFlare were removed from the
         // default sources based on an explicit request — they used to be added
         // automatically for every new user despite not being needed. Existing users
         // who already had these two sources are handled in WorkshopDatabase
@@ -30,7 +30,7 @@ object DefaultSources {
         // isCustom=0, i.e. the user didn't manually add them with the exact same
         // name) during the database upgrade.
         //
-        // FIX (moved to direct WebView): MyLiveWallpapers was removed from the
+        // Resolved issue: moved to direct WebView. MyLiveWallpapers was removed from the
         // default sources since the app now uses a direct WebView browsing flow
         // instead of the custom scraping/ad-bypass workaround this site needed.
         // See WorkshopDatabase.onUpgrade() for the matching cleanup step for

@@ -17,7 +17,7 @@ data class VideoFile(
     val sizeBytes: Long
 ) {
     companion object {
-        // FIX (dead black screen, no crash, when opening the Editor): this
+        // Resolved issue: dead black screen, no crash, when opening the Editor. this
         // used to be `file.toURI().toString()` — plain java.io.File.toURI(),
         // which for an absolute path like
         // /storage/emulated/0/Download/YoukiDEX_Wallpapers/x.mp4 produces

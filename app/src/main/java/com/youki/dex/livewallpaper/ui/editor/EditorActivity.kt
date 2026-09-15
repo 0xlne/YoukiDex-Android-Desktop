@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.commitNow
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
@@ -121,7 +120,7 @@ class EditorActivity : com.youki.dex.activities.BaseFontScaleActivity(), ColorPi
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lw_editor)
 
-        // FIX (dead black screen with no reaction when opening the Editor):
+        // dead black screen with no reaction when opening the Editor — fixed below:
         // the old check `intent.getStringExtra(EXTRA_VIDEO_URI) ?: run { finish(); return }`
         // only caught a *missing* extra (null). If the extra was present but
         // blank/invalid (e.g. "" from a stale/deleted file, a race in the
@@ -145,7 +144,7 @@ class EditorActivity : com.youki.dex.activities.BaseFontScaleActivity(), ColorPi
 
         videoEngine = VideoEngine(this)
 
-        // FIX (glitch/freeze — duplicate GL contexts): create the ONE shared
+        // Bug fix — glitch/freeze — duplicate GL contexts. create the ONE shared
         // preview surface here, once, instead of letting each group's XML
         // inflate its own copy. It starts unparented; moveSharedPreviewInto()
         // attaches it to whichever container is active as soon as
@@ -584,8 +583,8 @@ class EditorActivity : com.youki.dex.activities.BaseFontScaleActivity(), ColorPi
                     val deltaY = event.rawY - dragStartRawY
                     maxMovementDuringTouch = maxOf(maxMovementDuringTouch, kotlin.math.abs(deltaY))
 
-                    // FIX (excessive sensitivity — any touch used to raise the
-                    // whole sheet):
+                    // Bug fix — excessive sensitivity — any touch used to raise the
+                    // whole sheet.
                     // We only actually move the sheet once the movement
                     // exceeds the touch slop threshold. Before this fix, every
                     // movement, however small, was applied immediately to

@@ -17,8 +17,7 @@ import java.util.Locale
  * writable without a runtime permission via scoped-storage-friendly APIs;
  * since this is a Download/<AppName>/ path (not app-private), the caller
  * is expected to hold MANAGE_EXTERNAL_STORAGE or have gone through
- * MediaStore — this class assumes that's already granted, same assumption
- * the rest of the app's file-manager code makes (see FileManagerFragment).
+ * MediaStore — this class assumes that's already granted.
  */
 object QaLogWriter {
 

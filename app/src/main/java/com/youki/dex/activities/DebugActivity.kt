@@ -4,12 +4,11 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.youki.dex.R
+import com.youki.dex.utils.AppUtils
 
 
 class DebugActivity : com.youki.dex.activities.BaseFontScaleActivity() {
@@ -36,9 +35,7 @@ class DebugActivity : com.youki.dex.activities.BaseFontScaleActivity() {
         // of the user right where they need to paste it.
         dialog.setNeutralButton(R.string.open_github_issue) { _, _ ->
             copyReportToClipboard(report)
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(
-                "https://github.com/mrYouki/YoukiDex-Android-Desktop/issues"
-            )))
+            AppUtils.openUrl(this, "https://github.com/mrYouki/YoukiDex-Android-Desktop/issues")
             finish()
         }
         dialog.setNegativeButton(R.string.open_again) { _, _ ->

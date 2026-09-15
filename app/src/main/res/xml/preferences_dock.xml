@@ -1,5 +1,12 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <PreferenceCategory
+        android:title="@string/dock_position_category">
+        <Preference
+            android:key="dock_position_toggle"
+            android:title="@string/dock_position_title"
+            android:summary="@string/dock_position_summary" />
+    </PreferenceCategory>
+    <PreferenceCategory
         android:title="@string/navigation">
 		<SwitchPreferenceCompat
             android:key="enable_nav_apps"
@@ -84,6 +91,11 @@
             android:entryValues="@array/activation_method_values" 
             android:key="activation_method"
             android:defaultValue="swipe" />
+        <SwitchPreferenceCompat
+            android:key="dock_hover_show_hide"
+            android:title="@string/dock_hover_show_hide_title"
+            android:summary="@string/dock_hover_show_hide_summary"
+            android:defaultValue="true" />
 		
 		<com.youki.dex.preferences.SliderPreference
 		    android:inputType="number"

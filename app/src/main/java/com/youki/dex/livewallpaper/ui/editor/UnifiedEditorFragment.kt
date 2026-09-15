@@ -82,14 +82,17 @@ class UnifiedEditorFragment : Fragment(R.layout.fragment_ed_unified) {
         val switchColorTuning = view.findViewById<MaterialSwitch>(R.id.u_switch_color_tuning)
 
         // The "FPS" slider was removed from the logic: rendering now follows the
-        // video's frames directly (see onFrameAvailable in
-        // YoukiGLWallpaperService), so there's nothing left for this slider to
-        // control. The sliderFps field is kept in the XML but hidden
-        // (visibility=gone) instead of being removed entirely from the layout,
-        // to avoid touching any other constraints/IDs tied to it in the same file.
+        // The old FpsLimiter-based FPS slider was removed entirely (not just
+        // hidden) — see WallpaperConfig.kt's comment on the removed fpsLimit
+        // field for why that implementation was genuinely broken. This is a
+        // new, separate Max FPS control (u_slider_max_fps) added afterward:
+        // it throttles the draw call itself rather than filtering incoming
+        // video frames — see WallpaperGLEngine.maxFps's doc comment.
         val sliderSpeed  = view.findViewById<Slider>(R.id.u_slider_speed)
         val speedValue    = view.findViewById<android.widget.TextView>(R.id.u_speed_value)
         val switchMute    = view.findViewById<MaterialSwitch>(R.id.u_switch_mute)
+        val sliderMaxFps  = view.findViewById<Slider>(R.id.u_slider_max_fps)
+        val maxFpsValue   = view.findViewById<android.widget.TextView>(R.id.u_max_fps_value)
 
         // Audio pitch — a slider fully independent from speed, adjusted
         // manually by the user. Bound to an id already present in the layout
@@ -155,6 +158,13 @@ class UnifiedEditorFragment : Fragment(R.layout.fragment_ed_unified) {
                 cfg.withAudioPlayback(currentOrientation, cfg.audioPlaybackFor(currentOrientation).copy(speed = v))
             }
         }
+        sliderMaxFps.addOnChangeListener { _, v, fromUser ->
+            maxFpsValue.text = if (v <= 0f) getString(R.string.lw_max_fps_uncapped)
+                                else String.format(Locale.US, "%d FPS", v.toInt())
+            // Global setting (not per-orientation, unlike speed/pitch/mute
+            // above) — see WallpaperConfig.maxFps's own doc comment for why.
+            if (fromUser) viewModel.update { cfg -> cfg.copy(maxFps = v.toInt()) }
+        }
         switchMute.setOnCheckedChangeListener { _, checked ->
             if (!isApplyingExternalState) viewModel.update { cfg ->
                 cfg.withAudioPlayback(currentOrientation, cfg.audioPlaybackFor(currentOrientation).copy(muted = checked))
@@ -205,6 +215,7 @@ class UnifiedEditorFragment : Fragment(R.layout.fragment_ed_unified) {
             if (sliderBrightness.value != config.brightness) sliderBrightness.value = config.brightness.coerceIn(0f, 2f)
             if (sliderContrast.value != config.contrast)     sliderContrast.value   = config.contrast.coerceIn(0f, 2f)
             if (sliderSaturation.value != config.saturation) sliderSaturation.value = config.saturation.coerceIn(0f, 2f)
+            if (sliderMaxFps.value != config.maxFps.toFloat()) sliderMaxFps.value = config.maxFps.toFloat().coerceIn(0f, 120f)
 
             // Fully decoupled from landscape: we read from
             // audioPlaybackFor(currentOrientation) instead of

@@ -11,13 +11,10 @@ import android.os.Bundle
 import android.os.Handler
 import android.provider.Settings
 import android.view.View
-import android.view.inputmethod.EditorInfo
 import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import android.widget.ViewSwitcher
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import com.google.android.material.button.MaterialButton
@@ -29,15 +26,11 @@ import com.youki.dex.fragments.MultiUserFragment
 import com.youki.dex.utils.ShizukoManager
 import com.youki.dex.utils.RootManager
 import com.youki.dex.services.NotificationService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import com.youki.dex.utils.ColorUtils
 import com.youki.dex.utils.AppUtils
 import com.youki.dex.utils.DeviceUtils
 import kotlin.reflect.KFunction0
-import androidx.core.net.toUri
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
@@ -60,7 +53,7 @@ class MainActivity : BaseFontScaleActivity(),
         caller: PreferenceFragmentCompat,
         pref: androidx.preference.Preference
     ): Boolean {
-        // FIX (About/Contributors rows looked clickable but did nothing):
+        // Patched: About/Contributors rows looked clickable but did nothing.
         // same root cause as applyOpenFragmentExtra() below — this callback
         // had no debounce of its own, so a fast double-tap on a preference
         // row (or a tap landing while the previous row's ripple/transition
@@ -177,7 +170,7 @@ class MainActivity : BaseFontScaleActivity(),
     private var lastFragmentSwitchAt = 0L
 
     private fun applyOpenFragmentExtra(intent: Intent?) {
-        // FIX (settings list showed every row doubled/staggered): MainActivity
+        // Bug fix — settings list showed every row doubled/staggered. MainActivity
         // is launchMode="singleTask" specifically so repeat taps on any of
         // the dock's "Settings" shortcuts (App Menu gear, power menu, etc.)
         // reuse this same instance via onNewIntent() instead of stacking a
@@ -384,9 +377,22 @@ class MainActivity : BaseFontScaleActivity(),
 
         requiredBtn.setOnClickListener { viewSwitcher.showPrevious() }
         optionalBtn.setOnClickListener { viewSwitcher.showNext() }
-        updatePermissionsStatus()
 
+        // FIX: findViewById() on an AlertDialog only works AFTER show() has
+        // attached its content view to the window — calling it earlier
+        // (as this used to, right before .show() below) silently returns
+        // null for every view looked up via permissionsDialog.findViewById
+        // (Manage External Storage, Post Notifications, Bluetooth, Write
+        // System Settings, Read Media). Their whole ?.let {} block would
+        // then just skip running, leaving each one stuck on the ic_alert/
+        // colorError icon baked into the XML as a default — even when the
+        // permission was actually already granted (e.g. "All Files Access
+        // already granted" toast firing on tap, while the icon still shows
+        // a red warning). Showing first, then updating status, ensures
+        // findViewById can actually find these views on the very first
+        // open, not just after a later refresh (e.g. onResume()).
         permissionsDialog.show()
+        updatePermissionsStatus()
     }
 
     // Auto-grant WRITE_SECURE_SETTINGS — priority: Root → Shizuku
@@ -497,7 +503,13 @@ class MainActivity : BaseFontScaleActivity(),
             overlayBtn.setIconResource(R.drawable.ic_granted); overlayBtn.iconTint = accent
         }
         if (DeviceUtils.isAccessibilityServiceEnabled(this)) {
-            accessibilityBtn.setIconResource(R.drawable.ic_settings); accessibilityBtn.iconTint = accent
+            // GitHub issue #18: this used to show ic_settings (a gear icon)
+            // for the granted state — the only permission button on this
+            // whole screen not using ic_granted (a checkmark) like every
+            // other one above/below it. A gear icon reads as "needs
+            // configuration", not "already granted", which is what a user
+            // reported seeing and correctly called a mistake.
+            accessibilityBtn.setIconResource(R.drawable.ic_granted); accessibilityBtn.iconTint = accent
         } else {
             accessibilityBtn.setIconResource(R.drawable.ic_alert); accessibilityBtn.iconTint = warn
         }
@@ -626,8 +638,8 @@ class MainActivity : BaseFontScaleActivity(),
             }
         }
         db.setNeutralButton(R.string.help) { _, _ ->
-            startActivity(Intent(Intent.ACTION_VIEW,
-                "https://github.com/mrYouki/YoukiDex-Android-Desktop#grant-restricted-permissions".toUri()))
+            AppUtils.openUrl(this,
+                "https://github.com/mrYouki/YoukiDex-Android-Desktop#grant-restricted-permissions")
         }
         db.show()
     }
@@ -654,8 +666,8 @@ class MainActivity : BaseFontScaleActivity(),
             Toast.makeText(this, R.string.enable_access_help, Toast.LENGTH_LONG).show()
         }
         db.setNeutralButton(R.string.help) { _, _ ->
-            startActivity(Intent(Intent.ACTION_VIEW,
-                "https://github.com/mrYouki/YoukiDex-Android-Desktop#grant-restricted-permissions".toUri()))
+            AppUtils.openUrl(this,
+                "https://github.com/mrYouki/YoukiDex-Android-Desktop#grant-restricted-permissions")
         }
         db.show()
     }

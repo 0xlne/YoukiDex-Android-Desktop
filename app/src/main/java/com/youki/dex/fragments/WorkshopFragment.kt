@@ -18,10 +18,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import com.youki.dex.utils.VideoUtils
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.GridLayoutManager
@@ -43,7 +40,7 @@ import java.util.concurrent.TimeUnit
 class WorkshopFragment : Fragment() {
 
     companion object {
-        // FIX (Resource Waste): OkHttpClient used to be created from scratch on
+        // Bug fix — Resource Waste. OkHttpClient used to be created from scratch on
         // every download — every new instance reserves its own connection pool and
         // dispatcher thread pool (officially documented in OkHttp: "Each client holds
         // its own connection pool and thread pool. Reusing connections and threads
@@ -150,7 +147,7 @@ class WorkshopFragment : Fragment() {
         menuButton           = v.findViewById(R.id.workshop_fab_menu)
     }
 
-    // FIX (Workshop loading spinner): replaces the old CircularProgressIndicator
+    // Resolved issue: Workshop loading spinner. replaces the old CircularProgressIndicator
     // with the same bundled loading GIF used elsewhere (see UserMediaResolver —
     // BetaPreferences' "Change loading media" override applies here too, so a
     // person testing a different GIF sees it consistently across the app rather
@@ -251,7 +248,7 @@ class WorkshopFragment : Fragment() {
 
     private fun openInBrowser() {
         val url = webView.url?.takeIf { it.isNotBlank() } ?: return
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        com.youki.dex.utils.AppUtils.openUrl(requireContext(), url)
     }
 
     private fun copyUrl() {
@@ -314,8 +311,8 @@ class WorkshopFragment : Fragment() {
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 loadingState.visibility = View.VISIBLE
                 webView.visibility      = View.INVISIBLE
-                // FIX ("الصفحة أحيانًا ما تحمل" — page sometimes never finishes
-                // loading): onPageFinished only fires once the WebView considers
+                // Patched: "الصفحة أحيانًا ما تحمل" — page sometimes never finishes
+                // loading. onPageFinished only fires once the WebView considers
                 // the page's network activity settled. If the ad blocker's
                 // shouldInterceptRequest above blocks something the page is
                 // actually waiting on to finish rendering (a false-positive
@@ -345,6 +342,20 @@ class WorkshopFragment : Fragment() {
                 swipeRefresh.isRefreshing = false
                 if (isAdBlockerEnabled) view.evaluateJavascript(jsAdBlocker(), null)
                 view.evaluateJavascript(jsBlobInterceptor(), null)
+                // FIX: "Switch to desktop" only ever changed the UserAgent
+                // string + WebView-level useWideViewPort/setInitialScale.
+                // Neither of those overrides a site's own
+                // <meta name="viewport" content="width=device-width"> tag —
+                // that tag is what actually controls layout width, and most
+                // real sites have one, so the page kept rendering at phone
+                // width/DPI regardless of what the WebView-level settings
+                // said (this is documented Android WebView behavior: the
+                // page's own <meta viewport> tag takes precedence — see
+                // developer.android.com/develop/ui/views/layout/webapps/targeting).
+                // Force a real desktop-width viewport by directly rewriting
+                // (or creating, if the page has none) that meta tag to a
+                // fixed desktop-class width, only while Desktop mode is on.
+                if (isDesktopMode) view.evaluateJavascript(jsDesktopViewport(), null)
                 if (url?.contains("fonts.google.com") == true)
                     view.evaluateJavascript(jsGoogleFonts(), null)
                 if (url?.contains("moewalls.com") == true)
@@ -401,6 +412,37 @@ class WorkshopFragment : Fragment() {
     }
 
     // ── JS injections ──────────────────────────────────────────────────────
+    /**
+     * Rewrites (or creates) the page's <meta name="viewport"> tag to a
+     * fixed desktop-class width instead of whatever the site itself
+     * requests (almost always "width=device-width" — the phone-sized
+     * default). That tag, not the WebView's own useWideViewPort/
+     * setInitialScale settings, is what actually controls the page's
+     * rendered layout width — see the fix note at this function's call
+     * site in onPageFinished for why the WebView-level settings alone
+     * weren't enough ("desktop mode" was flipping the UserAgent but the
+     * page still laid out at phone width/DPI).
+     *
+     * 1280 matches this app's own DESKTOP_UA string (see its own comment —
+     * chosen to match a common real desktop browser width) so the
+     * UserAgent and the actual rendered width agree, instead of a site
+     * seeing a desktop UA but a phone-width layout (or vice versa), which
+     * is exactly the kind of mismatch that makes sites serve broken/
+     * inconsistent layouts.
+     */
+    private fun jsDesktopViewport() = """
+        (function(){
+            var DESKTOP_WIDTH = 1280;
+            var m = document.querySelector('meta[name="viewport"]');
+            if (!m) {
+                m = document.createElement('meta');
+                m.name = 'viewport';
+                document.head.appendChild(m);
+            }
+            m.setAttribute('content', 'width=' + DESKTOP_WIDTH + ', initial-scale=1');
+        })();
+    """.trimIndent()
+
     private fun jsAdBlocker() = """
         (function(){
             if(window.__ykAd__)return; window.__ykAd__=true;
@@ -418,7 +460,7 @@ class WorkshopFragment : Fragment() {
             function rm(){s.forEach(function(q){try{document.querySelectorAll(q)
                 .forEach(function(e){e.remove();});}catch(e){}});}
             rm();
-            // FIX (page slow to load / feels sluggish): this used to call rm()
+            // page slow to load / feels sluggish — fixed below: this used to call rm()
             // on every single DOM mutation anywhere on the page
             // (new MutationObserver(rm).observe(...)). Ad-heavy sites mutate
             // the DOM constantly — lazy-loaded images, ad refreshes, tracking
@@ -1371,7 +1413,7 @@ class WorkshopFragment : Fragment() {
         try {
             (loadingGif.drawable as? android.graphics.drawable.AnimatedImageDrawable)?.stop()
         } catch (e: Exception) {}
-        // FIX (Memory Leak / Crash risk): the correct order for destroying the WebView matters:
+        // Memory Leak / Crash risk — fixed below: the correct order for destroying the WebView matters:
         // 1) Stop any in-progress load (stopLoading) — prevents onPageFinished/JS callback
         //    from running on the WebView after the Fragment has died (this sometimes caused
         //    "IllegalStateException: WebView.destroy() called while still attached")

@@ -602,7 +602,6 @@
     <string name="app_frozen">App congelada</string>
     <string name="accessibility_service_desc">Úsalo para iniciar y detener el Dock. Requiere el permiso anterior. Si obtienes un error sobre <b>Configuración restringida</b>, toca el botón de Ayuda a continuación</string>
     <string name="hide_status_bar_summary">Oculta la barra de estado superior de Android para un aspecto de escritorio más limpio</string>
-    <string name="file_manager">Gestor de archivos</string>
     <string name="tweak_hardcore_desc">Elimina los límites térmicos y de FPS para una experiencia de juego fluida</string>
     <string name="tweak_battery_desc">Mejorar el consumo de energía y acelerar la carga</string>
     <string name="write_secure_settings_already_granted">WRITE_SECURE_SETTINGS ya concedido</string>
@@ -674,7 +673,6 @@
     <string name="notifications">Notificaciones</string>
     <string name="move_to">Mover a...</string>
     <string name="dock_height">Altura del dock</string>
-    <string name="lw_fps_limit">Límite de FPS</string>
     <string name="lw_bg_black">Negro</string>
     <string name="lw_flip_v">Voltear verticalmente</string>
     <string name="enable_open_music_title">Alt+M para abrir tu app de música predeterminada</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Bienvenido a Youki DEX</string>
     <string name="onboarding_welcome_body">Vamos a configurar tu escritorio. Solo tomará un minuto.</string>
-    <string name="onboarding_renderer_title">Elige tu motor de renderizado</string>
-    <string name="onboarding_renderer_description">Vulkan es más reciente y puede ser más rápido en algunos dispositivos, pero no todos los dispositivos se benefician por igual — la calidad del soporte varía. OpenGL ES es la opción segura y compatible que funciona bien en casi todos los dispositivos. Puedes cambiarlo en cualquier momento desde Configuración avanzada.</string>
-    <string name="onboarding_renderer_auto">Automático</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Información del renderizador no disponible por ahora</string>
-    <string name="onboarding_renderer_change_later_note">Puedes cambiar esto en cualquier momento desde Configuración avanzada.</string>
     <string name="onboarding_permissions_title">Una cosa más</string>
     <string name="onboarding_permissions_body">Conceder acceso a Shizuku permite que el escritorio se inicie directamente, sin avisos adicionales. Puedes omitir esto y concederlo más tarde desde Configuración.</string>
     <string name="onboarding_skip_warning">Sin esto, el escritorio pedirá permisos de la forma habitual cada vez que los necesite — eso también está completamente bien, es solo un flujo diferente.</string>

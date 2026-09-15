@@ -209,13 +209,39 @@ class AppAdapter(
         init { nameTv.maxLines = if (singleLine) 1 else 2 }
 
         fun bind(app: App, listener: OnAppClickListener) {
-            itemView.setOnClickListener      { v -> listener.onAppClicked(app, v) }
-            itemView.setOnLongClickListener  { v -> listener.onAppLongClicked(app, v); true }
-            itemView.setOnTouchListener      { v, e ->
-                if (e.buttonState == MotionEvent.BUTTON_SECONDARY) {
-                    listener.onAppLongClicked(app, v); true
-                } else false
+            // Same opt-in double-click behavior as DockAppAdapter — see that
+            // file's bind() for the full reasoning on the "require_double_click_apps"
+            // setting and why a single click intentionally no-ops when it's on.
+            val prefs = PreferenceManager.getDefaultSharedPreferences(itemView.context)
+            if (prefs.getBoolean("require_double_click_apps", false)) {
+                val gestureDetector = android.view.GestureDetector(
+                    itemView.context,
+                    object : android.view.GestureDetector.SimpleOnGestureListener() {
+                        override fun onDoubleTap(e: MotionEvent): Boolean {
+                            listener.onAppClicked(app, itemView)
+                            return true
+                        }
+                    }
+                )
+                itemView.setOnClickListener(null)
+                itemView.setOnTouchListener { v, e ->
+                    if (e.buttonState == MotionEvent.BUTTON_SECONDARY) {
+                        listener.onAppLongClicked(app, v); true
+                    } else {
+                        gestureDetector.onTouchEvent(e)
+                        v.performClick()
+                        true
+                    }
+                }
+            } else {
+                itemView.setOnClickListener      { v -> listener.onAppClicked(app, v) }
+                itemView.setOnTouchListener      { v, e ->
+                    if (e.buttonState == MotionEvent.BUTTON_SECONDARY) {
+                        listener.onAppLongClicked(app, v); true
+                    } else false
+                }
             }
+            itemView.setOnLongClickListener  { v -> listener.onAppLongClicked(app, v); true }
         }
     }
 }

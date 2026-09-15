@@ -22,6 +22,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.LabelFormatter
 import com.youki.dex.R
 import com.youki.dex.preferences.SliderPreference
+import com.youki.dex.utils.AppUtils
 import com.youki.dex.utils.DeviceUtils
 import com.youki.dex.utils.Utils
 import androidx.core.content.edit
@@ -34,6 +35,21 @@ class AdvancedPreferences : PreferenceFragmentCompat() {
 
     override fun onCreatePreferences(arg0: Bundle?, arg1: String?) {
         setPreferencesFromResource(R.xml.preferences_advanced, arg1)
+        // FIX: dead click handler — the "Notification Listener" row itself
+        // (see preferences_advanced.xml's own "FIX: صلاحية الإشعارات — يفتح
+        // الصفحة الصحيحة مباشرةً" comment right above its <Preference>
+        // definition) was written and wired up correctly, but in the wrong
+        // fragment: PermissionsPreferences.onPreferenceTreeClick(), a
+        // fragment that loads this exact same XML resource but is never
+        // actually reachable from any Settings entry point (its only
+        // reference anywhere in the codebase is QaTargetRegistry, an
+        // internal QA test-target list, not real navigation). Tapping this
+        // row on the actual screen the user reaches did nothing. Moved
+        // here, onto the fragment that's really shown.
+        findPreference<Preference>("notification_listener_permission")?.setOnPreferenceClickListener {
+            AppUtils.openSystemSettings(requireContext(), Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            true
+        }
         val preferLastDisplay = findPreference<Preference>("prefer_last_display")
         preferLastDisplay!!.isVisible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
         var hasWriteSettingsPermission = DeviceUtils.hasWriteSettingsPermission(requireContext())
@@ -52,19 +68,6 @@ class AdvancedPreferences : PreferenceFragmentCompat() {
         findPreference<Preference>("soft_reboot")!!.setOnPreferenceClickListener {
             DeviceUtils.softReboot()
             false
-        }
-
-        // ── Renderer backend (OpenGL ES / Vulkan / Auto) ────────────────────
-        // Reuses the exact same OnboardingPrefs.getRendererBackend/setRendererBackend
-        // pair the onboarding wizard's renderer-choice step writes to (same
-        // SharedPreferences key "renderer_backend"), so a choice made here or there
-        // is always the same single source of truth — no separate onboarding-only
-        // setting the user can no longer reach afterward.
-        val vulkanInfoPref = findPreference<Preference>("renderer_vulkan_info")
-        vulkanInfoPref?.summary = try {
-            com.youki.dex.livewallpaper.NativeBridge.nativeQueryVulkanCapabilities()
-        } catch (e: UnsatisfiedLinkError) {
-            getString(R.string.onboarding_renderer_vulkan_info_unavailable)
         }
 
         findPreference<Preference>("share_display_info")!!.setOnPreferenceClickListener {
@@ -167,10 +170,23 @@ class AdvancedPreferences : PreferenceFragmentCompat() {
                 slider.isTickVisible = false
                 slider.labelBehavior = LabelFormatter.LABEL_GONE
                 slider.stepSize = 1f
-                slider.value =
-                    dockHeight.sharedPreferences?.getString(dockHeight.key, "56")?.toFloatOrNull() ?: 56f
+                // FIX (crash): valueFrom/valueTo must be set BEFORE value.
+                // MaterialSlider validates `value` against the current
+                // valueFrom/valueTo the moment it's assigned — setting value
+                // first (while valueFrom/valueTo still held old/default
+                // bounds) let an out-of-range stored value (e.g. 49 from a
+                // build where the range used to start lower) get accepted,
+                // then crash as soon as valueFrom/valueTo were tightened
+                // afterward: IllegalStateException "Slider value(49.0) must
+                // be greater or equal to valueFrom(50.0)". Setting the
+                // bounds first, then coercing the restored value into that
+                // range, means an old/out-of-range saved value is silently
+                // clamped instead of crashing the settings screen.
                 slider.valueFrom = 50f
                 slider.valueTo = 70f
+                slider.value =
+                    (dockHeight.sharedPreferences?.getString(dockHeight.key, "56")?.toFloatOrNull() ?: 56f)
+                        .coerceIn(slider.valueFrom, slider.valueTo)
                 slider.addOnChangeListener { _, value, _
                     ->
                     dockHeight.sharedPreferences?.edit {
@@ -214,6 +230,61 @@ class AdvancedPreferences : PreferenceFragmentCompat() {
         findPreference<Preference>("manage_workshop_sources")?.setOnPreferenceClickListener {
             startActivity(
                 Intent(requireContext(), com.youki.dex.activities.WorkshopSourcesActivity::class.java)
+            )
+            true
+        }
+
+        // ── OTG / UHID mode ───────────────────────────────────────────────
+        findPreference<SwitchPreferenceCompat>("uhid_mode_enabled")
+            ?.setOnPreferenceChangeListener { _, newValue ->
+                val enable = newValue as Boolean
+                val uhid   = com.youki.dex.utils.UhidManager.getInstance(requireContext())
+                val shizuku = com.youki.dex.utils.ShizukoManager.getInstance(requireContext())
+                if (enable) {
+                    if (shizuku.hasPermission) {
+                        uhid.start(
+                            shizuku,
+                            onReady = {
+                                com.google.android.material.snackbar.Snackbar
+                                    .make(requireView(), "OTG HID mode active", 2000).show()
+                            },
+                            onError = { err ->
+                                com.google.android.material.snackbar.Snackbar
+                                    .make(requireView(), "UHID error: $err", 4000).show()
+                                // revert the switch if startup failed
+                                findPreference<SwitchPreferenceCompat>("uhid_mode_enabled")
+                                    ?.isChecked = false
+                            }
+                        )
+                    } else {
+                        // Fall back to root if Shizuku not available
+                        uhid.startAsRoot(
+                            onReady = {
+                                com.google.android.material.snackbar.Snackbar
+                                    .make(requireView(), "OTG HID mode active (root)", 2000).show()
+                            },
+                            onError = { err ->
+                                com.google.android.material.snackbar.Snackbar
+                                    .make(requireView(), "UHID error (no Shizuku/root?): $err", 4000).show()
+                                findPreference<SwitchPreferenceCompat>("uhid_mode_enabled")
+                                    ?.isChecked = false
+                            }
+                        )
+                    }
+                } else {
+                    uhid.stop()
+                    com.google.android.material.snackbar.Snackbar
+                        .make(requireView(), "OTG HID mode stopped", 2000).show()
+                }
+                true
+            }
+
+        // "Open Trackpad" — separate from the switch above so the user can
+        // jump straight to the touch surface; TrackpadActivity starts UHID
+        // itself if the switch above hasn't been flipped on yet.
+        findPreference<Preference>("uhid_open_trackpad")?.setOnPreferenceClickListener {
+            startActivity(
+                Intent(requireContext(), com.youki.dex.activities.TrackpadActivity::class.java)
             )
             true
         }

@@ -126,7 +126,7 @@ class WorkshopDatabase private constructor(context: Context) :
         db.execSQL("DROP TABLE IF EXISTS $TABLE")
         db.execSQL("ALTER TABLE ${TABLE}_new RENAME TO $TABLE")
 
-        // FIX (unnecessary sites): delete LiveWall and WallpaperFlare from existing
+        // Resolved issue: unnecessary sites. delete LiveWall and WallpaperFlare from existing
         // users' databases where they were previously installed as default sources,
         // since they were removed from DefaultSources.list() as of this version. The
         // isCustom=0 condition protects any source the user added manually with the
@@ -137,7 +137,7 @@ class WorkshopDatabase private constructor(context: Context) :
             )
         }
 
-        // FIX (moved to direct WebView): delete MyLiveWallpapers from existing
+        // Previously broken (moved to direct WebView): delete MyLiveWallpapers from existing
         // users' databases now that its custom scraping/ad-bypass workaround is no
         // longer needed. Same isCustom=0 protection as above.
         if (oldVersion < 19) {

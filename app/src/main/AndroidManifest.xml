@@ -12,13 +12,6 @@
         <package android:name="me.zhanghai.android.files" />
     </queries>
 
-    <!-- ✅ صلاحية مخصصة لحماية قناة التواصل بين Youki DEX و MaterialFiles
-         protectionLevel="signature" يعني فقط التطبيقات الموقعة بنفس مفتاح Workshop
-         تقدر ترسل/تستقبل رسائل عبر هذي القناة — أي تطبيق ثالث على الجهاز لا يقدر يتدخل -->
-    <permission
-        android:name="com.youki.dex.permission.DEX_BRIDGE"
-        android:protectionLevel="signature" />
-
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.CAPTURE_VIDEO_OUTPUT"
         tools:ignore="ProtectedPermissions" />
@@ -176,6 +169,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".activities.DebugActivity" android:exported="false" />
+        <activity android:name=".activities.TrackpadActivity" android:exported="false" />
 
         <!-- Easter Egg — مخفية، لا تظهر في الـ recents -->
         <activity
@@ -317,7 +311,7 @@
             android:configChanges="orientation|screenSize|keyboardHidden|density|colorMode|fontScale"
             android:theme="@style/AppTheme.NoActionBar" />
 
-        <!-- مشغّل فيديو موحّد — يُشغَّل من WorkshopFragment و FileManagerFragment -->
+        <!-- مشغّل فيديو موحّد — يُشغَّل من WorkshopFragment -->
         <activity
             android:name=".activities.UnifiedVideoPlayerActivity"
             android:exported="false"
@@ -341,15 +335,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_provider_paths" />
         </provider>
-
-        <!-- ✅ DexRemoteService — قناة Messenger لاستقبال أحداث من MaterialFiles
-             (مثل: "أضف هذا الملف لسطح المكتب"). exported=true لازم عشان MaterialFiles
-             من عملية (process) ثانية يقدر يربط (bind) عليها، بس محمية بصلاحية signature
-             فلا يقدر أي تطبيق ثالث يتصل بيها إلا لو موقّع بنفس مفتاح Workshop. -->
-        <service
-            android:name=".services.DexRemoteService"
-            android:exported="true"
-            android:permission="com.youki.dex.permission.DEX_BRIDGE" />
 
     </application>
 

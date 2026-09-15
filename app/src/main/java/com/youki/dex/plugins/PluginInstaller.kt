@@ -134,7 +134,7 @@ object PluginInstaller {
         val shizuku = ShizukoManager.getInstance(context)
         val root    = RootManager.getInstance(context)
 
-        // FIX (Critical Security — Zip Slip via Root/Shizuku privileges):
+        // Patched: Critical Security — Zip Slip via Root/Shizuku privileges.
         // The original "unzip" command used to run directly with elevated
         // root/Shizuku privileges with no prior check on the ZIP's contents at
         // all. If the file (from an untrusted external source the user
@@ -195,7 +195,7 @@ object PluginInstaller {
                 while (entry != null) {
                     if (!entry.isDirectory) {
                         val out = File(destDir, entry.name)
-                        // FIX (Critical Security — Zip Slip / Path Traversal):
+                        // Fix for Critical Security — Zip Slip / Path Traversal:
                         // entry.name comes from an untrusted external ZIP file
                         // (the user downloads it from external sources). If it
                         // contained "../../..", File(destDir, entry.name) used

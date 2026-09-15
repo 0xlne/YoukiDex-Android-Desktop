@@ -5,17 +5,17 @@ import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 
 /**
- * Manages the AppWidget host for the desktop grid.
+ * Manages the AppWidget host for the desktop.
  *
- * Widgets are placed on the same native occupancy grid as app icons
- * (see DesktopGridManager / desktop_grid.rs). Each widget occupies a
- * rectangle of cells (colSpan × rowSpan). Position and size preferences
- * are persisted under "widget_<hostId>_*" keys so they survive restarts.
+ * Widgets are placed on the same free pixel-position desktop as app icons
+ * (see LauncherActivity's findFreeCell/snapToGrid). Each widget occupies a
+ * colSpan × rowSpan visual footprint sized off the same grid unit used for
+ * icon snapping. Position and size preferences are persisted under
+ * "widget_<hostId>_*" keys so they survive restarts.
  *
  * Usage from LauncherActivity:
  *   1. Call [start] in onStart / onResume so widget updates flow in.

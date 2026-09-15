@@ -659,7 +659,6 @@
     <string name="app_hiding_category">ਐਪ ਲੁਕਾਉਣਾ</string>
     <string name="discord">Discord</string>
     <string name="custom_display_resolution_title">ਡਿਸਪਲੇ ਰੈਜ਼ੋਲਿਊਸ਼ਨ</string>
-    <string name="lw_fps_limit">FPS ਸੀਮਾ</string>
     <string name="open_as_folder">ਫੋਲਡਰ ਵਜੋਂ ਖੋਲ੍ਹੋ</string>
     <string name="n_selected">%1$d ਚੁਣੇ ਗਏ</string>
     <string name="zram_set_to">ZRAM %1$s \'ਤੇ ਸੈੱਟ ਕੀਤਾ ਗਿਆ</string>
@@ -667,7 +666,6 @@
     <string name="always_floating_summary">ਲਾਂਚ ਮੋਡ ਓਵਰਰਾਈਡ ਕਰੋ ਅਤੇ ਐਪਾਂ ਹਮੇਸ਼ਾ ਫਲੋਟਿੰਗ ਵਿੰਡੋ ਮੋਡ ਵਿੱਚ ਖੋਲ੍ਹੋ</string>
     <string name="bubble_opacity_title">ਬੁਲਬੁਲਾ ਧੁੰਦਲਾਪਨ</string>
     <string name="shizuku_active_app_detection_title">Shizuku ਰਾਹੀਂ ਸਰਗਰਮ ਐਪ ਪਛਾਣੋ</string>
-    <string name="file_manager">ਫਾਈਲ ਮੈਨੇਜਰ</string>
     <string name="saved_file">ਸੰਭਾਲਿਆ: %1$s</string>
     <string name="lw_tab_performance">ਪ੍ਰਦਰਸ਼ਨ</string>
     <string name="tweak_amoled_desc">ਰੰਗ ਗੁਣਵੱਤਾ ਸੁਧਾਰੋ ਅਤੇ ਡਿਸਪਲੇ ਲਈ HDR ਸਮਰੱਥ ਕਰੋ</string>
@@ -862,13 +860,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Youki DEX ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ</string>
     <string name="onboarding_welcome_body">ਆਓ ਤੁਹਾਡਾ ਡੈਸਕਟਾਪ ਸੈੱਟ ਕਰੀਏ। ਇਸ ਵਿੱਚ ਸਿਰਫ਼ ਇੱਕ ਮਿੰਟ ਲੱਗੇਗਾ।</string>
-    <string name="onboarding_renderer_title">ਆਪਣਾ ਰੈਂਡਰਰ ਚੁਣੋ</string>
-    <string name="onboarding_renderer_description">Vulkan ਨਵਾਂ ਹੈ ਅਤੇ ਕੁਝ ਡਿਵਾਈਸਾਂ \'ਤੇ ਤੇਜ਼ ਹੋ ਸਕਦਾ ਹੈ, ਪਰ ਹਰ ਡਿਵਾਈਸ ਨੂੰ ਬਰਾਬਰ ਫਾਇਦਾ ਨਹੀਂ ਹੁੰਦਾ — ਸਹਾਇਤਾ ਦੀ ਗੁਣਵੱਤਾ ਵੱਖ-ਵੱਖ ਹੁੰਦੀ ਹੈ। OpenGL ES ਇੱਕ ਸੁਰੱਖਿਅਤ, ਅਨੁਕੂਲ ਵਿਕਲਪ ਹੈ ਜੋ ਲਗਭਗ ਹਰ ਥਾਂ ਵਧੀਆ ਕੰਮ ਕਰਦਾ ਹੈ। ਤੁਸੀਂ ਇਸਨੂੰ ਕਿਸੇ ਵੀ ਸਮੇਂ ਐਡਵਾਂਸਡ ਸੈਟਿੰਗਾਂ ਤੋਂ ਬਦਲ ਸਕਦੇ ਹੋ।</string>
-    <string name="onboarding_renderer_auto">ਆਟੋ</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">ਰੈਂਡਰਰ ਜਾਣਕਾਰੀ ਇਸ ਵੇਲੇ ਉਪਲਬਧ ਨਹੀਂ ਹੈ</string>
-    <string name="onboarding_renderer_change_later_note">ਤੁਸੀਂ ਇਸਨੂੰ ਕਿਸੇ ਵੀ ਸਮੇਂ ਐਡਵਾਂਸਡ ਸੈਟਿੰਗਾਂ ਤੋਂ ਬਦਲ ਸਕਦੇ ਹੋ।</string>
     <string name="onboarding_permissions_title">ਇੱਕ ਹੋਰ ਗੱਲ</string>
     <string name="onboarding_permissions_body">Shizuku ਪਹੁੰਚ ਦੇਣ ਨਾਲ ਡੈਸਕਟਾਪ ਬਿਨਾਂ ਕਿਸੇ ਵਾਧੂ ਪ੍ਰੋਂਪਟ ਦੇ ਸਿੱਧਾ ਸ਼ੁਰੂ ਹੋ ਸਕਦਾ ਹੈ। ਤੁਸੀਂ ਇਸਨੂੰ ਛੱਡ ਸਕਦੇ ਹੋ ਅਤੇ ਬਾਅਦ ਵਿੱਚ ਸੈਟਿੰਗਾਂ ਤੋਂ ਦੇ ਸਕਦੇ ਹੋ।</string>
     <string name="onboarding_skip_warning">ਇਸ ਤੋਂ ਬਿਨਾਂ, ਜਦੋਂ ਵੀ ਲੋੜ ਹੋਵੇਗੀ ਡੈਸਕਟਾਪ ਆਮ ਤਰੀਕੇ ਨਾਲ ਇਜਾਜ਼ਤਾਂ ਮੰਗੇਗਾ — ਇਹ ਵੀ ਪੂਰੀ ਤਰ੍ਹਾਂ ਠੀਕ ਹੈ, ਬੱਸ ਇੱਕ ਵੱਖਰਾ ਤਰੀਕਾ ਹੈ।</string>

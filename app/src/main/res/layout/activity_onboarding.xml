@@ -2,7 +2,7 @@
 <!--
     Onboarding wizard container. A ViewPager2 hosts each step as its own Fragment
     (OnboardingWelcomeFragment, OnboardingPermissionsFragment, OnboardingProfileFragment,
-    OnboardingRendererChoiceFragment, OnboardingDoneFragment), each entering/exiting with
+    OnboardingDoneFragment), each entering/exiting with
     MaterialSharedAxis.X (verified against the real material-components-android source —
     MaterialSharedAxis extends MaterialVisibility<VisibilityAnimatorProvider>, the correct
     pattern per the library's own Motion docs for "steps with a navigational relationship").

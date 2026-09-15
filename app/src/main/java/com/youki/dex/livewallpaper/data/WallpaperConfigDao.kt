@@ -152,8 +152,8 @@ class WallpaperConfigDao(context: Context) {
                 brightness            = flt(COL_BRIGHTNESS),
                 contrast              = flt(COL_CONTRAST),
                 saturation            = flt(COL_SATURATION),
-                fpsLimit              = int(COL_FPS_LIMIT),
                 playbackSpeed         = flt(COL_PLAYBACK_SPEED),
+                maxFps                = int(COL_MAX_FPS),
                 muted                 = bool(COL_MUTED),
                 audioPitch            = flt(COL_AUDIO_PITCH),
                 playbackSpeedLandscape= flt(COL_PLAYBACK_SPEED_L),
@@ -190,8 +190,15 @@ class WallpaperConfigDao(context: Context) {
             put(COL_BRIGHTNESS,            brightness)
             put(COL_CONTRAST,              contrast)
             put(COL_SATURATION,            saturation)
-            put(COL_FPS_LIMIT,             fpsLimit)
+            // COL_FPS_LIMIT intentionally not written anymore — see
+            // WallpaperConfig.kt's comment on why the field itself was
+            // removed. The database column stays (SQLite DROP COLUMN needs
+            // a full table rebuild — not worth the migration risk for a
+            // column nothing reads), it just never receives a new value
+            // from this point on; existing rows keep whatever was last
+            // written before this change.
             put(COL_PLAYBACK_SPEED,        playbackSpeed)
+            put(COL_MAX_FPS,                maxFps)
             put(COL_MUTED,                 if (muted) 1 else 0)
             put(COL_AUDIO_PITCH,           audioPitch)
             put(COL_PLAYBACK_SPEED_L,      playbackSpeedLandscape)

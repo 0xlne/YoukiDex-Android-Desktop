@@ -317,7 +317,6 @@ class IconPackUtils(val context: Context) {
     }
 
     private fun getResourceIdForActivityIcon(info: ActivityInfo): Int {
-        // TODO since we are loading in background block access until load ready
         if (!isIconPackLoaded || loading) {
             return 0
         }

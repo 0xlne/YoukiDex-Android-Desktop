@@ -14,12 +14,12 @@ import android.content.pm.PackageManager
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.os.Build
-import android.os.SystemClock
 import android.os.UserManager
 import android.view.Display
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.net.toUri
 import androidx.preference.PreferenceManager
+import com.youki.dex.R
 import com.youki.dex.models.App
 import com.youki.dex.models.AppTask
 import com.youki.dex.models.DockApp
@@ -50,7 +50,7 @@ object AppUtils {
     private fun sortAppsByNameCaseSensitive(apps: List<App>): List<App> =
         apps.sortedBy { it.name }
 
-    // FIX (Unbounded Memory Growth): this used to be a plain ConcurrentHashMap
+    // Unbounded Memory Growth — fixed below: this used to be a plain ConcurrentHashMap
     // with no upper limit — on a device with 300 apps, every icon at
     // DENSITY_XXXHIGH resolution can reach tens of KB, so the total
     // accumulates to tens of MB unnecessarily. Converting it to an LruCache
@@ -90,7 +90,6 @@ object AppUtils {
 
         appsInfo = appsInfo.sortedWith(compareBy { it.label.toString() }).toMutableList()
 
-        //TODO: Filter Google App
         for (appInfo in appsInfo) {
             val pkg = appInfo.componentName.packageName
             val icon = iconCache.get(pkg) ?: appInfo.getIcon(android.util.DisplayMetrics.DENSITY_XXXHIGH).also {
@@ -488,8 +487,87 @@ object AppUtils {
     }
 
     /**
-     * Unified entry point for opening any android.provider.Settings.ACTION_*
-     * screen (or any other system settings Intent) as a freeform window
+     * Opens a URL in the user's default browser.
+     * Centralizes what used to be duplicated per-fragment startActivity(ACTION_VIEW)
+     * calls (GitHub links, Discord, docs, wiki, "open in browser"...). None of the
+     * duplicates had a try/catch, so on any device without a browser app — locked-down
+     * kiosk devices, some enterprise ROMs, or an install where the user removed every
+     * browser — tapping any of those buttons (including the crash-report/"help" links
+     * in DebugActivity, ironically) would crash the app instead of just failing quietly.
+     */
+    fun openUrl(context: Context, url: String) {
+        try {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (e: android.content.ActivityNotFoundException) {
+            android.widget.Toast.makeText(
+                context,
+                context.getString(R.string.no_browser_available),
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    /**
+     * Stops the DEX dock service (broadcasts DOCK_SERVICE_ACTION with
+     * "disable_self", handled by DockService) and switches to the device's
+     * next-available default launcher, if there is one other than this app
+     * itself.
+     *
+     * Extracted from two identical copies: PerfectServer.kt's
+     * DockTileService.onClick (Quick Settings tile) and
+     * ShortcutLauncherActivity — the latter's own comment said outright
+     * "same logic as disable_self in DockTileService", i.e. the duplication
+     * was already known, just never consolidated.
+     *
+     * [launchOther] is how the caller starts the other launcher's home
+     * Intent — PerfectServer's caller uses its own launchActivity() (which
+     * adds freeform ActivityOptions), ShortcutLauncherActivity used a plain
+     * startActivity(); passing it in keeps that difference instead of
+     * silently changing either caller's behavior.
+     */
+    fun stopDexAndLaunchOtherHome(context: Context, launchOther: (Intent) -> Unit) {
+        context.sendBroadcast(
+            Intent(com.youki.dex.services.DOCK_SERVICE_ACTION)
+                .setPackage(context.packageName)
+                .putExtra("action", "disable_self")
+        )
+        val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val target = context.packageManager.queryIntentActivities(homeIntent, 0)
+            .filter { it.activityInfo.packageName != context.packageName }
+            .firstOrNull()
+        if (target != null) {
+            launchOther(
+                Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_HOME)
+                    .setPackage(target.activityInfo.packageName)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            )
+        }
+    }
+
+    /**
+     * True if [packageName] already has a running process — used to detect
+     * a cold start (no existing process, first-ever launch or fully killed)
+     * vs. bringing an already-running app back to front. See
+     * PerfectServer.launchApp's own comment on why this distinction matters:
+     * ActivityOptions.setLaunchBounds()/setLaunchWindowingMode() are
+     * unreliable on a genuine cold start specifically — the system creates
+     * the new Task at a default size before the requested freeform bounds
+     * reliably take effect, which is why a first-ever app launch can open
+     * at roughly half-screen even with "Maximized" selected as the default,
+     * while relaunching the same (already-running) app afterward opens at
+     * the correct size — see GitHub issue "app launching maximized" (the
+     * bug report that led to this function existing).
+     */
+    fun isAppProcessRunning(context: Context, packageName: String): Boolean {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return activityManager.runningAppProcesses?.any { it.processName == packageName } ?: false
+    }
+
+    /**
+     * Opens a system settings screen (or any other system settings Intent) as a freeform window
      * instead of full-screen — used to be inconsistent across the project:
      * dock buttons (PerfectServer, via launchApp) already went through
      * makeActivityOptions() and opened freeform correctly, but the same
@@ -503,6 +581,27 @@ object AppUtils {
      * isn't the dock itself; the dock passes its real height explicitly).
      */
     @JvmOverloads
+    /**
+     * FIX (Discord/user report — "the permission buttons don't go anywhere"):
+     * this used to launch every Settings.ACTION_* screen (Accessibility,
+     * Notification Listener, App Details, Display, etc.) inside a freeform
+     * floating window via makeActivityOptions(context, "freeform", ...) —
+     * the same windowing mode used for regular apps opened from the dock.
+     * System Settings screens are not regular apps: several OEM ROMs
+     * (Samsung One UI, MIUI, HarmonyOS, and others) specifically reject or
+     * silently reposition/ignore forced freeform bounds for the Settings
+     * package, especially for security-sensitive screens like Accessibility
+     * and Notification Listener — the launch either silently no-ops, opens
+     * off-screen, or gets pushed behind the dock's own overlay window with
+     * no visible error. From the user's side this looks exactly like
+     * "I tapped the button and nothing happened", even though the button,
+     * the click listener, and the Intent were all correct.
+     *
+     * Settings screens should always be given the full screen to render
+     * predictably on every device, so this now unconditionally launches
+     * fullscreen — dockHeight/displayId are still respected for which
+     * display to use, just not for freeform bounds.
+     */
     fun openSystemSettings(
         context: Context,
         intent: Intent,
@@ -510,8 +609,43 @@ object AppUtils {
         displayId: Int = Display.DEFAULT_DISPLAY
     ) {
         val launchIntent = Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val options = makeActivityOptions(context, "freeform", dockHeight, displayId)
-        context.startActivity(launchIntent, options.toBundle())
+        val options = makeActivityOptions(context, "fullscreen", dockHeight, displayId)
+        // Not every Settings.ACTION_* screen exists on every OEM skin/ROM
+        // (customized MIUI/EMUI/budget-device builds are the common case
+        // that drops one of these) — this single function fans out to ~19
+        // call sites across the whole app (accessibility, notification
+        // access, display, sound, airplane mode, etc.), so an unguarded
+        // ActivityNotFoundException here could crash the app from almost
+        // any settings button in the UI, not just one screen.
+        //
+        // GitHub issue #15: some external displays (e.g. USB-C portable
+        // touch monitors) reject launchDisplayId with a SecurityException
+        // ("Permission Denial: ... with launchDisplayId=N") because the app
+        // isn't allowed to place activities on that particular display —
+        // this varies by device/monitor and isn't something we can detect
+        // in advance. Previously this crashed the whole launcher. Now: on
+        // SecurityException, retry once with plain launchDisplayId-less
+        // options (falls back to the default display) instead of crashing.
+        try {
+            context.startActivity(launchIntent, options.toBundle())
+        } catch (e: android.content.ActivityNotFoundException) {
+            android.widget.Toast.makeText(
+                context,
+                context.getString(R.string.settings_screen_unavailable),
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        } catch (e: SecurityException) {
+            try {
+                val fallbackOptions = makeActivityOptions(context, "fullscreen", dockHeight, Display.DEFAULT_DISPLAY)
+                context.startActivity(launchIntent, fallbackOptions.toBundle())
+            } catch (e2: Exception) {
+                android.widget.Toast.makeText(
+                    context,
+                    context.getString(R.string.settings_screen_unavailable),
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 
     /**
@@ -610,6 +744,51 @@ object AppUtils {
         DeviceUtils.runAsRoot(modeCmd)
         Thread.sleep(150)
         DeviceUtils.runAsRoot(resizeCmd)
+    }
+
+    /**
+     * Fully closes (kills, not minimizes) the task identified by [taskId].
+     * Discord report ("what about closing apps? ... I want to disable them
+     * so when I switch back to my phone launcher I don't have to switch
+     * them back"): the only "close" behavior previously available moved a
+     * window off-screen (minimize) rather than ending the task, so
+     * switching to the phone's own launcher still left every "closed" app
+     * running in the background. Same three-tier shell fallback pattern
+     * as resizeTask above (plain shell → ShellManager → Shizuku → root),
+     * since removing another app's task the same way needs elevated
+     * access — `am task remove` targeting a task this app doesn't own is
+     * not something a normal app-level ActivityManager.removeTask() call
+     * can do without a signature-level permission (see this project's own
+     * SecurityException fix for the same reasoning around
+     * setLaunchDisplayId, in PerfectServer.launchApp).
+     */
+    fun closeTask(context: Context, taskId: Int) {
+        if (taskId < 0) return
+        val cmd = "am task remove $taskId"
+
+        try {
+            val p = Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd))
+            p.waitFor()
+            if (p.exitValue() == 0) return
+        } catch (e: Exception) {}
+
+        try {
+            val shell = com.youki.dex.server.ShellManager
+            if (shell.isAvailable) {
+                shell.execSync(cmd)
+                return
+            }
+        } catch (e: Exception) {}
+
+        try {
+            val shizuku = ShizukoManager.getInstance(context)
+            if (shizuku.hasPermission) {
+                shizuku.runShellSync(cmd)
+                return
+            }
+        } catch (e: Exception) {}
+
+        DeviceUtils.runAsRoot(cmd)
     }
 
     private fun execShizukuSync(shizuku: ShizukoManager, cmd: String) {

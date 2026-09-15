@@ -20,7 +20,7 @@ object Quad {
 
     // Texture coordinates — same vertex order as above
     //
-    // FIX (the image/video was upside down — "like a flipped page"):
+    // Fix for the image/video was upside down — "like a flipped page":
     // The vertex order above is: top-left, bottom-left, top-right, bottom-right.
     // In OpenGL's texture coordinate system, V=0 means the "bottom" of the
     // image and V=1 means the "top" of the image (the opposite of the usual

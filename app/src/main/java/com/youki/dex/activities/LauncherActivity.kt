@@ -34,18 +34,18 @@ import com.youki.dex.services.DESKTOP_APP_PINNED
 import com.youki.dex.services.DOCK_SERVICE_ACTION
 import com.youki.dex.services.DOCK_SERVICE_CONNECTED
 import com.youki.dex.utils.AppUtils
-import com.youki.dex.livewallpaper.DesktopGridManager
 import com.youki.dex.livewallpaper.DesktopWidgetManager
-import com.youki.dex.utils.DesktopGridPrefs
+import com.youki.dex.utils.Utils
+import kotlin.math.abs
 
 const val LAUNCHER_ACTION  = "launcher_action"
 const val LAUNCHER_RESUMED = "launcher_resumed"
 const val LAUNCHER_PAUSED  = "launcher_paused"
 
 /**
- * The desktop. Hosts both app icons and AppWidgets on a shared native grid
- * (desktop_grid.rs / DesktopGridManager). App icons occupy 1×1 cells;
- * widgets occupy colSpan×rowSpan cells and are placed/dragged the same way.
+ * The desktop. Hosts app icons, freely positioned and dragged in pixel
+ * space (snapped to a fixed-size visual grid for tidiness, not confined to
+ * a bounded columns×rows grid — see loadDesktopApps()/findFreeCell()).
  *
  * Widget flow:
  *   - Long-press on empty space → context menu → "Add widget"
@@ -72,7 +72,6 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
     private var dockServiceReceiver: BroadcastReceiver? = null
     private var bgTouchX = 0f
     private var bgTouchY = 0f
-    private var desktopGrid: DesktopGridManager? = null
 
     // ── Widget support ────────────────────────────────────────────────────────
     // TEMPORARILY DISABLED: widgets caused repeated crashes (duplicate view IDs on
@@ -136,7 +135,13 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
         desktopContainer  = findViewById(R.id.desktop_icons_container)
         serviceBtn        = findViewById(R.id.service_btn)
 
-        hideSystemBars()
+        // GitHub issue #21: hiding the status/nav bar was unconditional —
+        // no way to opt out. "hide_system_bars" defaults to true so
+        // existing users see no behavior change; unchecking it in
+        // preferences_appearance.xml skips the hide entirely, keeping both
+        // bars visible and letting the desktop layout use its normal
+        // (non-fullscreen) inset handling instead.
+        if (prefs.getBoolean("hide_system_bars", true)) hideSystemBars()
         applyDockPadding()
         applyStatusBarInsetHandling()
 
@@ -214,14 +219,12 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
         super.onDestroy()
         prefs.unregisterOnSharedPreferenceChangeListener(this)
         try { dockServiceReceiver?.let { unregisterReceiver(it) } } catch (e: Exception) {}
-        desktopGrid?.close()
-        desktopGrid = null
         if (WIDGETS_ENABLED) widgetManager?.release()
     }
 
     override fun onSharedPreferenceChanged(sp: SharedPreferences, key: String?) {
         if (key == "dock_height") applyDockPadding()
-        if (key == DesktopGridPrefs.KEY_COLUMNS || key == DesktopGridPrefs.KEY_ROWS) loadDesktopApps()
+        if (key == "single_line_labels") loadDesktopApps()
     }
 
     // ── Widget picker result ─────────────────────────────────────────────────
@@ -272,125 +275,57 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  Grid
+    //  Positioning (free pixel placement, snapped to a visual grid — not
+    //  confined to a fixed columns×rows count. See the class doc comment:
+    //  this replaced a bounded-grid system that silently overlapped icons
+    //  once their count exceeded the grid's cell capacity.)
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun gridColumns(): Int = DesktopGridPrefs.getColumns(this)
-    private fun gridRows(): Int    = DesktopGridPrefs.getRows(this)
+    private fun iconSizePx(): Int = Utils.dpToPx(this, 50)
 
-    private fun containerWidthPx(): Int =
-        desktopContainer.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
+    private fun getGridSize(): Int = Utils.dpToPx(this, 85)
 
-    private fun containerHeightPx(): Int =
-        desktopContainer.height.takeIf { it > 0 } ?: resources.displayMetrics.heightPixels
-
-    private fun cellWidthPx():  Int = containerWidthPx()  / gridColumns()
-    private fun cellHeightPx(): Int = containerHeightPx() / gridRows()
-
-    private fun iconSizePx(): Int = (cellWidthPx() * 0.7f).toInt().coerceAtLeast(1)
-
-    private fun pixelToCell(x: Int, y: Int): Pair<Int, Int> {
-        val cols = gridColumns(); val rows = gridRows()
-        val cellW = (containerWidthPx() / cols).coerceAtLeast(1)
-        val cellH = (containerHeightPx() / rows).coerceAtLeast(1)
-        val col = (x / cellW).coerceIn(0, cols - 1)
-        val row = (y / cellH).coerceIn(0, rows - 1)
-        return col to row
+    /** Snap a pixel value to the nearest grid cell. */
+    private fun snapToGrid(value: Int): Int {
+        val g = getGridSize()
+        return ((value + g / 2) / g) * g
     }
 
-    private fun cellToPixel(col: Int, row: Int): Pair<Int, Int> {
-        val cellW = (containerWidthPx() / gridColumns()).coerceAtLeast(1)
-        val cellH = (containerHeightPx() / gridRows()).coerceAtLeast(1)
-        return (col * cellW) to (row * cellH)
+    /** Check if two icon positions overlap (within icon bounds). */
+    private fun overlaps(x1: Int, y1: Int, x2: Int, y2: Int, iconSizePx: Int): Boolean {
+        val margin = (iconSizePx * 0.6f).toInt()
+        return abs(x1 - x2) < margin && abs(y1 - y2) < margin
     }
 
-    private fun rebuildGridFromViews(): DesktopGridManager {
-        val grid = desktopGrid?.also { it.clear() }
-            ?: DesktopGridManager(gridColumns(), gridRows()).also { desktopGrid = it }
-        for (i in 0 until desktopContainer.childCount) {
-            val child = desktopContainer.getChildAt(i)
-            val id    = child.getTag(R.id.desktop_item_id_tag) as? String ?: continue
-            val lp    = child.layoutParams as? FrameLayout.LayoutParams ?: continue
-            val (col, row) = pixelToCell(lp.leftMargin, lp.topMargin)
-            // Widgets occupy colSpan×rowSpan; icons occupy 1×1.
-            val colSpan = (child.getTag(R.id.desktop_item_col_span_tag) as? Int) ?: 1
-            val rowSpan = (child.getTag(R.id.desktop_item_row_span_tag) as? Int) ?: 1
-            grid.place(id, col, row, colSpan, rowSpan)
-        }
-        return grid
-    }
-
-    fun resolveDrop(
-        itemId: String,
-        draggedView: View,
-        dropPxX: Int,
-        dropPxY: Int,
-        draggedFromCol: Int? = null,
-        draggedFromRow: Int? = null,
-    ) {
-        val grid = rebuildGridFromViews()
-        val (draggedCol, draggedRow) = if (draggedFromCol != null && draggedFromRow != null) {
-            draggedFromCol to draggedFromRow
-        } else {
-            val lp = draggedView.layoutParams as FrameLayout.LayoutParams
-            pixelToCell(lp.leftMargin, lp.topMargin)
-        }
-
-        val placements = grid.resolveDrop(
-            itemId, draggedCol, draggedRow,
-            dropPxX, dropPxY,
-            containerWidthPx(), containerHeightPx(),
-        )
-
-        val placementsById = placements.associateBy { it.itemId }
-        for (i in 0 until desktopContainer.childCount) {
-            val child     = desktopContainer.getChildAt(i)
-            val id        = child.getTag(R.id.desktop_item_id_tag) as? String ?: continue
-            val placement = placementsById[id] ?: continue
-            val childLp   = child.layoutParams as FrameLayout.LayoutParams
-            childLp.leftMargin = placement.pixelX; childLp.topMargin = placement.pixelY
-            child.layoutParams = childLp
-            persistItemPosition(id, placement.col, placement.row)
-        }
-    }
-
-    private fun persistItemPosition(itemId: String, col: Int, row: Int) {
-        when {
-            itemId.startsWith("app:") ->
-                prefs.edit { putString("deskpos_${itemId.removePrefix("app:")}", "$col,$row") }
-            itemId.startsWith("widget:") -> {
-                val hostId = itemId.removePrefix("widget:").toIntOrNull() ?: return
-                val colSpan = (findViewByItemId(itemId)?.getTag(R.id.desktop_item_col_span_tag) as? Int) ?: 2
-                val rowSpan = (findViewByItemId(itemId)?.getTag(R.id.desktop_item_row_span_tag) as? Int) ?: 2
-                DesktopWidgetManager.saveWidgetPosition(this, hostId, col, row, colSpan, rowSpan)
+    /** Find a free grid cell starting from (startX, startY) that doesn't overlap existing icons. */
+    private fun findFreeCell(
+        startX: Int, startY: Int,
+        occupiedPositions: List<Pair<Int, Int>>,
+        iconSizePx: Int,
+    ): Pair<Int, Int> {
+        val g = getGridSize()
+        // Search in expanding rings from the target cell.
+        for (radius in 0..20) {
+            val candidates = mutableListOf<Pair<Int, Int>>()
+            if (radius == 0) {
+                candidates.add(Pair(startX, startY))
+            } else {
+                for (col in -radius..radius) {
+                    candidates.add(Pair(startX + col * g, startY - radius * g))
+                    candidates.add(Pair(startX + col * g, startY + radius * g))
+                }
+                for (row in -radius + 1 until radius) {
+                    candidates.add(Pair(startX - radius * g, startY + row * g))
+                    candidates.add(Pair(startX + radius * g, startY + row * g))
+                }
+            }
+            for ((cx, cy) in candidates) {
+                if (cx < 0 || cy < 0) continue
+                val free = occupiedPositions.none { (ox, oy) -> overlaps(cx, cy, ox, oy, iconSizePx) }
+                if (free) return Pair(cx, cy)
             }
         }
-    }
-
-    private fun findViewByItemId(itemId: String): View? {
-        for (i in 0 until desktopContainer.childCount) {
-            val child = desktopContainer.getChildAt(i)
-            if (child.getTag(R.id.desktop_item_id_tag) == itemId) return child
-        }
-        return null
-    }
-
-    private fun placeInFreeCell(
-        grid: DesktopGridManager,
-        itemId: String,
-        preferredCol: Int,
-        preferredRow: Int,
-        colSpan: Int = 1,
-        rowSpan: Int = 1,
-    ): Pair<Int, Int> {
-        return if (colSpan == 1 && rowSpan == 1) {
-            grid.placeInFreeCell(itemId, preferredCol, preferredRow)
-        } else {
-            // For multi-cell widgets use firstFreeRect.
-            val (col, row) = grid.firstFreeRect(colSpan, rowSpan) ?: (0 to 0)
-            grid.place(itemId, col, row, colSpan, rowSpan)
-            col to row
-        }
+        return Pair(startX, startY) // fallback
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -399,18 +334,24 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
 
     fun loadDesktopApps() {
         desktopContainer.removeAllViews()
-        desktopGrid?.close()
-        val grid = DesktopGridManager(gridColumns(), gridRows())
-        desktopGrid = grid
+        val iconSize = iconSizePx()
+        val g = getGridSize()
+        val occupiedPositions = mutableListOf<Pair<Int, Int>>()
 
         // 1. App icons
         val apps = AppUtils.getPinnedApps(this, AppUtils.DESKTOP_LIST)
         apps.forEachIndexed { index, app ->
-            val itemId = "app:${app.packageName}"
-            val (prefCol, prefRow) = savedPosition("deskpos_${app.packageName}", index)
-            val (col, row) = placeInFreeCell(grid, itemId, prefCol, prefRow)
-            val (px, py)   = cellToPixel(col, row)
-            addAppIcon(app, px, py)
+            val savedPos = prefs.getString("deskpos_${app.packageName}", null)
+            val pos = if (savedPos != null) {
+                val parts = savedPos.split(",")
+                val sx = snapToGrid(parts.getOrNull(0)?.toIntOrNull() ?: g)
+                val sy = snapToGrid(parts.getOrNull(1)?.toIntOrNull() ?: g)
+                findFreeCell(sx, sy, occupiedPositions, iconSize)
+            } else {
+                findFreeCell(0, index * g, occupiedPositions, iconSize)
+            }
+            occupiedPositions.add(pos)
+            addAppIcon(app, pos.first, pos.second)
         }
 
         // 2. Widgets (temporarily disabled — see WIDGETS_ENABLED)
@@ -425,20 +366,13 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
                         return@forEach
                     }
                     val (colSpan, rowSpan) = DesktopWidgetManager.getSavedSpan(this, hostId)
-                    val (prefCol, prefRow) = DesktopWidgetManager.getSavedPosition(this, hostId) ?: (0 to 0)
-                    val itemId = "widget:$hostId"
-                    val (col, row) = placeInFreeCell(grid, itemId, prefCol, prefRow, colSpan, rowSpan)
-                    val (px, py)   = cellToPixel(col, row)
-                    addWidgetView(hostId, px, py, colSpan, rowSpan)
+                    val (prefX, prefY) = DesktopWidgetManager.getSavedPosition(this, hostId) ?: (0 to 0)
+                    val pos = findFreeCell(prefX, prefY, occupiedPositions, iconSize)
+                    occupiedPositions.add(pos)
+                    addWidgetView(hostId, pos.first, pos.second, colSpan, rowSpan)
                 }
             }
         }
-    }
-
-    private fun savedPosition(key: String, fallbackIndex: Int): Pair<Int, Int> {
-        val saved = prefs.getString(key, null) ?: return 0 to fallbackIndex
-        val parts = saved.split(",")
-        return (parts.getOrNull(0)?.toIntOrNull() ?: 0) to (parts.getOrNull(1)?.toIntOrNull() ?: fallbackIndex)
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -454,13 +388,13 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
 
         val lp = FrameLayout.LayoutParams(size, size).apply { leftMargin = startX; topMargin = startY }
         view.layoutParams = lp
-        val itemId = "app:${app.packageName}"
-        view.setTag(R.id.desktop_item_id_tag, itemId)
-        view.setTag(R.id.desktop_item_col_span_tag, 1)
-        view.setTag(R.id.desktop_item_row_span_tag, 1)
 
-        wireDrag(view, itemId)
-        view.setOnClickListener { launchApp(app.packageName) }
+        wireDrag(view) { freeX, freeY ->
+            prefs.edit { putString("deskpos_${app.packageName}", "$freeX,$freeY") }
+        }
+        view.setOnClickListener {
+            launchApp(app.packageName)
+        }
         view.setOnLongClickListener { showAppContextMenu(app, view); true }
 
         desktopContainer.addView(view)
@@ -478,18 +412,18 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
         if (!WIDGETS_ENABLED) return
         val widgetManager = widgetManager ?: return
         val info = widgetManager.getInfo(hostId) ?: return
-        // Derive sensible default span from the widget's minimum cell size hints.
-        val colSpan = (info.minWidth  / cellWidthPx().coerceAtLeast(1)).coerceIn(1, gridColumns())
-            .let { if (it == 0) 2 else it }
-        val rowSpan = (info.minHeight / cellHeightPx().coerceAtLeast(1)).coerceIn(1, gridRows())
-            .let { if (it == 0) 2 else it }
+        val g = getGridSize()
+        val colSpan = (info.minWidth  / g.coerceAtLeast(1)).coerceAtLeast(1)
+        val rowSpan = (info.minHeight / g.coerceAtLeast(1)).coerceAtLeast(1)
 
-        val grid = rebuildGridFromViews()
-        val (col, row) = grid.firstFreeRect(colSpan, rowSpan) ?: (0 to 0)
-        val (px, py)   = cellToPixel(col, row)
+        val occupied = (0 until desktopContainer.childCount).mapNotNull { i ->
+            val lp = desktopContainer.getChildAt(i).layoutParams as? FrameLayout.LayoutParams
+            lp?.let { it.leftMargin to it.topMargin }
+        }
+        val pos = findFreeCell(0, 0, occupied, iconSizePx())
 
-        DesktopWidgetManager.saveWidgetPosition(this, hostId, col, row, colSpan, rowSpan)
-        addWidgetView(hostId, px, py, colSpan, rowSpan)
+        DesktopWidgetManager.saveWidgetPosition(this, hostId, pos.first, pos.second, colSpan, rowSpan)
+        addWidgetView(hostId, pos.first, pos.second, colSpan, rowSpan)
     }
 
     /** Inflates the AppWidgetHostView and adds it to the desktop container. */
@@ -497,10 +431,11 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
     private fun addWidgetView(hostId: Int, startX: Int, startY: Int, colSpan: Int, rowSpan: Int) {
         if (!WIDGETS_ENABLED) return
         val widgetManager = widgetManager ?: return
-        val widthPx  = cellWidthPx()  * colSpan
-        val heightPx = cellHeightPx() * rowSpan
+        val g = getGridSize()
+        val widthPx  = g * colSpan
+        val heightPx = g * rowSpan
         val hostView: AppWidgetHostView = try {
-            widgetManager.createHostView(hostId, cellWidthPx(), cellHeightPx(), colSpan, rowSpan)
+            widgetManager.createHostView(hostId, g, g, colSpan, rowSpan)
         } catch (e: Exception) {
             // Widget host view creation failed (e.g. provider removed) — skip.
             widgetManager.deleteWidgetId(hostId)
@@ -511,12 +446,10 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
             leftMargin = startX; topMargin = startY
         }
         hostView.layoutParams = lp
-        val itemId = "widget:$hostId"
-        hostView.setTag(R.id.desktop_item_id_tag, itemId)
-        hostView.setTag(R.id.desktop_item_col_span_tag, colSpan)
-        hostView.setTag(R.id.desktop_item_row_span_tag, rowSpan)
 
-        wireDrag(hostView, itemId)
+        wireDrag(hostView) { freeX, freeY ->
+            DesktopWidgetManager.saveWidgetPosition(this, hostId, freeX, freeY, colSpan, rowSpan)
+        }
         hostView.setOnLongClickListener {
             showWidgetContextMenu(hostId, hostView)
             true
@@ -529,8 +462,13 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
     //  Drag handling (shared between icons and widgets)
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Free-drag with grid-snap on release. [onDropped] persists the final
+     * (already-snapped, already-collision-checked) pixel position — the
+     * caller decides where (app prefs vs widget prefs).
+     */
     @SuppressLint("ClickableViewAccessibility")
-    private fun wireDrag(view: View, itemId: String) {
+    private fun wireDrag(view: View, onDropped: (x: Int, y: Int) -> Unit) {
         var hasMoved   = false
         var downRawX   = 0f; var downRawY = 0f
         var startLeft  = 0;  var startTop = 0
@@ -547,7 +485,7 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
                 MotionEvent.ACTION_MOVE -> {
                     val dx = event.rawX - downRawX
                     val dy = event.rawY - downRawY
-                    if (!hasMoved && (kotlin.math.abs(dx) > 12 || kotlin.math.abs(dy) > 12)) hasMoved = true
+                    if (!hasMoved && (abs(dx) > 12 || abs(dy) > 12)) hasMoved = true
                     if (hasMoved) {
                         val lp = v.layoutParams as FrameLayout.LayoutParams
                         lp.leftMargin = (startLeft + dx).toInt().coerceAtLeast(0)
@@ -559,7 +497,21 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
                     v.elevation = 0f
                     if (hasMoved) {
                         val lp = v.layoutParams as FrameLayout.LayoutParams
-                        resolveDrop(itemId, v, lp.leftMargin, lp.topMargin)
+                        val snappedX = snapToGrid(lp.leftMargin).coerceAtLeast(0)
+                        val snappedY = snapToGrid(lp.topMargin).coerceAtLeast(0)
+
+                        // Check overlap against every other desktop item.
+                        val otherPositions = (0 until desktopContainer.childCount).mapNotNull { i ->
+                            val child = desktopContainer.getChildAt(i)
+                            if (child == v) null
+                            else (child.layoutParams as? FrameLayout.LayoutParams)?.let { it.leftMargin to it.topMargin }
+                        }
+                        val freePos = findFreeCell(snappedX, snappedY, otherPositions, iconSizePx())
+
+                        lp.leftMargin = freePos.first
+                        lp.topMargin  = freePos.second
+                        v.layoutParams = lp
+                        onDropped(freePos.first, freePos.second)
                     }
                 }
             }
@@ -660,8 +612,8 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
         desktopContainer.setPadding(desktopContainer.paddingLeft, desktopContainer.paddingTop, desktopContainer.paddingRight, dockHeightPx)
     }
 
-    // FIX ("الاج تو اج ... تغطي على الشاشة" — status bar overlapping desktop
-    // content): hideSystemBars() hides the status bar by default, but
+    // Patched: "الاج تو اج ... تغطي على الشاشة" — status bar overlapping desktop
+    // content. hideSystemBars() hides the status bar by default, but
     // BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE means the user can still pull it
     // back in with a swipe from the top (this is desktop/DEX mode — that's
     // the only way to reach the time/notifications, so it has to stay
@@ -716,7 +668,7 @@ open class LauncherActivity : BaseFontScaleActivity(), SharedPreferences.OnShare
 
     @SuppressLint("NewApi")
     private fun hideSystemBars() {
-        // FIX (content not extending under the display cutout/notch — "الحواف
+        // Previously broken (content not extending under the display cutout/notch — "الحواف
         // الممنوعة"): two separate problems here.
         //   1. LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES only allows content
         //      to extend into the cutout on the SHORT edge — with

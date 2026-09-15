@@ -117,7 +117,6 @@
     <string name="github">GitHub</string>
     <string name="enable_open_settings_title">Alt+P로 설정 열기</string>
     <string name="plugin_deleted">%1$s이(가) 삭제되었습니다</string>
-    <string name="lw_fps_limit">FPS 제한</string>
     <string name="enable_tiling_shortcut">Alt+화살표로 창을 타일 형태로 정렬</string>
     <string name="apps">앱</string>
     <string name="enable_qs_pin_title">고정</string>
@@ -439,7 +438,6 @@
     <string name="one_user_on_device">이 기기에 사용자 1명</string>
     <string name="icon_pack">아이콘 팩</string>
     <string name="enable_f10_title">F10으로 분할 화면 전환</string>
-    <string name="file_manager">파일 관리자</string>
     <string name="manage_service">서비스 관리</string>
     <string name="done_colon">완료: %1$s</string>
     <string name="perf_thermal_current">현재 모드</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Youki DEX에 오신 것을 환영합니다</string>
     <string name="onboarding_welcome_body">데스크톱을 설정해볼게요. 1분이면 충분합니다.</string>
-    <string name="onboarding_renderer_title">렌더러 선택</string>
-    <string name="onboarding_renderer_description">Vulkan은 더 새로운 기술이며 일부 기기에서 더 빠를 수 있지만, 모든 기기가 동일한 혜택을 받는 것은 아니며 지원 품질이 다양합니다. OpenGL ES는 거의 모든 곳에서 안정적으로 작동하는 안전하고 호환성이 좋은 선택입니다. 이 설정은 언제든지 고급 설정에서 변경할 수 있습니다.</string>
-    <string name="onboarding_renderer_auto">자동</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">현재 렌더러 정보를 사용할 수 없습니다</string>
-    <string name="onboarding_renderer_change_later_note">이 설정은 언제든지 고급 설정에서 변경할 수 있습니다.</string>
     <string name="onboarding_permissions_title">한 가지 더</string>
     <string name="onboarding_permissions_body">Shizuku 액세스를 허용하면 추가 안내 없이 데스크톱이 바로 시작됩니다. 이 단계를 건너뛰고 나중에 설정에서 허용할 수도 있습니다.</string>
     <string name="onboarding_skip_warning">이것 없이도 필요할 때마다 데스크톱이 일반적인 방식으로 권한을 요청합니다 — 그것도 완전히 괜찮으며, 단지 다른 방식일 뿐입니다.</string>

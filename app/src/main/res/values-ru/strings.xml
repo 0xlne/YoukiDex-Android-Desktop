@@ -566,7 +566,6 @@
     <string name="disabled">Отключено</string>
     <string name="app_frozen">Приложение заморожено</string>
     <string name="enable_dock_shortcut_title">Показывать кнопку быстрого запуска в Доке</string>
-    <string name="lw_fps_limit">Ограничение FPS</string>
     <string name="folder_creation_failed">Не удалось создать папку</string>
     <string name="select_or_enter_category">Выберите категорию или введите новую</string>
     <string name="off">Выключено</string>
@@ -633,7 +632,6 @@
     <string name="vp_repeat_on">Повтор включён</string>
     <string name="accessibility_service_description">Позволяет выполнять такие действия, как "Назад"</string>
     <string name="storage_desc">Используется для изменения значка меню и звуков событий</string>
-    <string name="file_manager">Файловый менеджер</string>
     <string name="center_app_menu">Меню приложений по центру</string>
     <string name="choose_apps">Выбрать приложения</string>
     <string name="delete_source_confirm_message">Этот источник будет удалён навсегда</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Добро пожаловать в Youki DEX</string>
     <string name="onboarding_welcome_body">Давайте настроим ваш рабочий стол. Это займёт всего минуту.</string>
-    <string name="onboarding_renderer_title">Выберите рендерер</string>
-    <string name="onboarding_renderer_description">Vulkan новее и может быть быстрее на некоторых устройствах, но не все устройства получают одинаковую выгоду — качество поддержки различается. OpenGL ES — безопасный, совместимый вариант, который хорошо работает почти везде. Вы можете изменить это в любое время в Расширенных настройках.</string>
-    <string name="onboarding_renderer_auto">Авто</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Информация о рендерере сейчас недоступна</string>
-    <string name="onboarding_renderer_change_later_note">Вы можете изменить это в любое время в Расширенных настройках.</string>
     <string name="onboarding_permissions_title">Ещё кое-что</string>
     <string name="onboarding_permissions_body">Предоставление доступа Shizuku позволяет рабочему столу запускаться напрямую, без дополнительных запросов. Вы можете пропустить это и предоставить доступ позже в Настройках.</string>
     <string name="onboarding_skip_warning">Без этого рабочий стол будет запрашивать разрешения обычным способом каждый раз, когда они понадобятся — это тоже совершенно нормально, просто другой сценарий.</string>

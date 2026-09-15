@@ -52,8 +52,30 @@ class WallpaperGLEngine(
     /** Prevents multiple overlapping render requests from stacking up in the Handler's queue (see the requestRender explanation below) */
     @Volatile private var renderPending = false
 
+    /**
+     * Maximum draw rate, or 0 for uncapped (draw on every requestRender()
+     * call, same as before this existed). Customization point added after
+     * fully removing the old, genuinely broken FpsLimiter (see git history
+     * / this class's own past comments) — that one filtered
+     * onFrameAvailable itself by comparing timestamps against a target
+     * rate, which meant real incoming video frames were dropped outright
+     * whenever the video's actual rate exceeded the configured limit,
+     * causing visible stutter instead of smoothness.
+     *
+     * This is throttling, not frame-dropping: requestRender() below still
+     * fires on every real onFrameAvailable callback (nothing upstream is
+     * filtered), it just skips actually calling drawFrame() if less than
+     * 1000/maxFps milliseconds have passed since the last draw — and
+     * drawFrame() itself always reads the SurfaceTexture's current/latest
+     * image (updateTexImage(), not a queue), so skipped draw calls never
+     * accumulate a backlog to "catch up" on; the next allowed draw simply
+     * shows whatever the newest frame is at that moment.
+     */
+    @Volatile var maxFps: Int = 0
+    private var lastDrawTimeNanos: Long = 0L
+
     fun surfaceCreated(holder: SurfaceHolder) {
-        // FIX (resource leak): if the system called surfaceCreated() twice
+        // Fix for resource leak: if the system called surfaceCreated() twice
         // without a surfaceDestroyed() in between (this can happen quickly on
         // the preview screen when navigating between pages), we used to
         // directly replace the old thread/handler without closing them first —
@@ -88,7 +110,7 @@ class WallpaperGLEngine(
     }
 
     fun surfaceDestroyed() {
-        // FIX (Crash — Race Condition): the old code used to call
+        // Resolved issue: Crash — Race Condition. the old code used to call
         // thread?.quitSafely() directly right after handler?.post {
         // releaseEgl() } — but quitSafely() runs immediately on the Main
         // Thread, ending the HandlerThread before the post { releaseEgl() } on
@@ -137,7 +159,27 @@ class WallpaperGLEngine(
         renderPending = true
         handler?.post {
             renderPending = false
-            if (surfaceReady) drawFrame()
+            if (!surfaceReady) return@post
+            val cap = maxFps
+            if (cap > 0) {
+                val minIntervalNanos = 1_000_000_000L / cap
+                val elapsed = System.nanoTime() - lastDrawTimeNanos
+                if (elapsed < minIntervalNanos) {
+                    // Too soon since the last draw — re-schedule for exactly
+                    // when the interval will have elapsed, instead of just
+                    // dropping this request. This is what keeps this a
+                    // "throttle", not a "drop": the frame that triggered
+                    // this call isn't discarded, its draw is delayed to the
+                    // next allowed slot, where drawFrame() will pick up
+                    // whatever is the newest SurfaceTexture image by then.
+                    handler?.postDelayed(
+                        { if (surfaceReady) drawFrame() },
+                        (minIntervalNanos - elapsed) / 1_000_000L
+                    )
+                    return@post
+                }
+            }
+            drawFrame()
         }
     }
 
@@ -152,6 +194,7 @@ class WallpaperGLEngine(
         try {
             renderer.onDrawFrame(null)
             EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+            lastDrawTimeNanos = System.nanoTime()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to draw frame", e)
         }
@@ -174,7 +217,7 @@ class WallpaperGLEngine(
             EGL14.EGL_GREEN_SIZE, 8,
             EGL14.EGL_BLUE_SIZE, 8,
             EGL14.EGL_ALPHA_SIZE, 8,
-            // FIX (hardening): the renderer clears GL_DEPTH_BUFFER_BIT, but we
+            // Resolved issue: hardening. the renderer clears GL_DEPTH_BUFFER_BIT, but we
             // weren't actually requesting a depth buffer from EGL at all — on
             // most chipsets this silently passes, but some GPUs (especially
             // older Mali ones) give a warning or unexpected behavior. We

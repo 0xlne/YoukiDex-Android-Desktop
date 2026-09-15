@@ -10,7 +10,6 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.youki.dex.R
 import com.youki.dex.preferences.FileChooserPreference
-import com.youki.dex.utils.AppUtils
 import com.youki.dex.utils.DeviceUtils
 
 private const val MENU_REQUEST_CODE = 4

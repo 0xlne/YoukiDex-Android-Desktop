@@ -18,7 +18,7 @@ class YoukiWallpaperDatabase private constructor(context: Context) :
 
     companion object {
         const val DATABASE_NAME = "youki_wallpaper.db"
-        const val DATABASE_VERSION = 3  // same version number as the previous Room version
+        const val DATABASE_VERSION = 4  // v4: added COL_MAX_FPS
 
         const val TABLE = "wallpaper_configs"
 
@@ -44,8 +44,14 @@ class YoukiWallpaperDatabase private constructor(context: Context) :
         const val COL_BRIGHTNESS             = "brightness"
         const val COL_CONTRAST               = "contrast"
         const val COL_SATURATION             = "saturation"
+        // Column kept in the schema (SQLite DROP COLUMN needs a full table
+        // rebuild) but no longer read into WallpaperConfig or written to by
+        // WallpaperConfigDao — see WallpaperConfig.kt's comment on this
+        // field's removal. Existing rows keep old values; new rows get
+        // SQL_CREATE's DEFAULT 60 and nothing ever updates it afterward.
         const val COL_FPS_LIMIT              = "fpsLimit"
         const val COL_PLAYBACK_SPEED         = "playbackSpeed"
+        const val COL_MAX_FPS                = "maxFps"
         const val COL_MUTED                  = "muted"
         const val COL_AUDIO_PITCH            = "audioPitch"
         const val COL_PLAYBACK_SPEED_L       = "playbackSpeedLandscape"
@@ -79,6 +85,7 @@ class YoukiWallpaperDatabase private constructor(context: Context) :
                 $COL_SATURATION         REAL NOT NULL DEFAULT 1.0,
                 $COL_FPS_LIMIT          INTEGER NOT NULL DEFAULT 60,
                 $COL_PLAYBACK_SPEED     REAL NOT NULL DEFAULT 1.0,
+                $COL_MAX_FPS            INTEGER NOT NULL DEFAULT 0,
                 $COL_MUTED              INTEGER NOT NULL DEFAULT 1,
                 $COL_AUDIO_PITCH        REAL NOT NULL DEFAULT 1.0,
                 $COL_PLAYBACK_SPEED_L   REAL NOT NULL DEFAULT 1.0,
@@ -129,9 +136,15 @@ class YoukiWallpaperDatabase private constructor(context: Context) :
             COL_AUDIO_PITCH_L    to "REAL NOT NULL DEFAULT 1.0"
         )
 
+        // Columns added in v4
+        val v4Columns = listOf(
+            COL_MAX_FPS to "INTEGER NOT NULL DEFAULT 0"
+        )
+
         val columnsToAdd = when {
-            oldVersion < 2 -> v2Columns + v3Columns
-            oldVersion < 3 -> v3Columns
+            oldVersion < 2 -> v2Columns + v3Columns + v4Columns
+            oldVersion < 3 -> v3Columns + v4Columns
+            oldVersion < 4 -> v4Columns
             else           -> emptyList()
         }
 

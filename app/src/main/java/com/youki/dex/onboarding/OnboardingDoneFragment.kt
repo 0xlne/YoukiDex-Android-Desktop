@@ -1,11 +1,10 @@
 package com.youki.dex.onboarding
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import com.youki.dex.R
+import com.youki.dex.utils.AppUtils
 
 /** Step 5 — confirmation screen. OnboardingActivity's Next button becomes "Finish" here.
  *
@@ -19,16 +18,13 @@ class OnboardingDoneFragment : Fragment(R.layout.fragment_onboarding_done) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<View>(R.id.row_onboarding_github).setOnClickListener {
-            openUrl("https://github.com/mrYouki/YoukiDex-Android-Desktop")
+            AppUtils.openUrl(requireContext(), "https://github.com/mrYouki/YoukiDex-Android-Desktop")
         }
         view.findViewById<View>(R.id.row_onboarding_discord).setOnClickListener {
-            openUrl("https://discord.gg/mKkaMxd5M2")
+            AppUtils.openUrl(requireContext(), "https://discord.gg/mKkaMxd5M2")
         }
         view.findViewById<View>(R.id.row_onboarding_report_issue).setOnClickListener {
-            openUrl("https://github.com/mrYouki/YoukiDex-Android-Desktop/issues")
+            AppUtils.openUrl(requireContext(), "https://github.com/mrYouki/YoukiDex-Android-Desktop/issues")
         }
     }
-
-    private fun openUrl(url: String) =
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 }

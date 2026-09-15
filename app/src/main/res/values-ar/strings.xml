@@ -297,9 +297,6 @@
     <string name="preferences_restored">تم استعادة الإعدادات</string>
 
     <string name="development_tools">أدوات التطوير</string>
-    <string name="renderer_category_title">محرك الرسومات</string>
-    <string name="renderer_backend_summary">اختر محرك الرسومات المستخدم للخلفيات المتحركة: الوضع التلقائي يختار الأنسب لجهازك، OpenGL ES الأكثر توافقًا، وVulkan ممكن يكون أسرع على الأجهزة المدعومة.</string>
-    <string name="renderer_vulkan_info_title">جارٍ التحقق من دعم Vulkan…</string>
     <string name="editor_category_title">محرر الخلفيات المتحركة</string>
     <string name="editor_preview_scale_title">حجم المعاينة</string>
     <string name="editor_preview_scale_summary">نسبة عرض المعاينة (16:9) من عرض شاشة المحرر، كنسبة مئوية (40-100). يحتاج إعادة فتح المحرر.</string>
@@ -456,7 +453,6 @@
     <string name="lw_brightness">السطوع</string>
     <string name="lw_contrast">التباين</string>
     <string name="lw_saturation">التشبّع</string>
-    <string name="lw_fps_limit">حد الإطارات (FPS)</string>
     <string name="lw_playback_speed">سرعة التشغيل</string>
     <string name="lw_audio_pitch">عمق الصوت</string>
     <string name="lw_muted">كتم الصوت</string>
@@ -602,7 +598,6 @@
     <string name="open_as_folder">فتح كمجلد</string>
     <string name="remove_from_desktop">إزالة من سطح المكتب</string>
     <string name="swipe_left_right_to_exit">اسحب يميناً أو يساراً للخروج</string>
-    <string name="materialfiles_not_installed">MaterialFiles غير مثبت على هذا الجهاز</string>
     <string name="select_a_file">اختر ملفاً</string>
     <string name="confirm_n">تأكيد (%1$d)</string>
     <string name="confirm_selection">تأكيد الاختيار</string>
@@ -842,7 +837,6 @@
     <string name="tweak_section_root">يتطلب Root</string>
     <string name="lw_apply_unsupported">جهازك لا يدعم ضبط الخلفيات الحية من التطبيقات مباشرة. اذهب إلى الإعدادات ← الخلفية لاختيار Youki DEX يدوياً.</string>
     <string name="lw_performance_section">الأداء</string>
-    <string name="file_manager">مدير الملفات</string>
     <string name="workshop_title">الورك شوب</string>
     <string name="workshop_search_hint">ابحث عن خلفيات أو خطوط…</string>
     <string name="workshop_type_wallpapers">خلفيات</string>
@@ -933,13 +927,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">مرحبًا بك في Youki DEX</string>
     <string name="onboarding_welcome_body">لنجهّز سطح مكتبك. لن يستغرق الأمر أكثر من دقيقة.</string>
-    <string name="onboarding_renderer_title">اختر محرك الرسوميات</string>
-    <string name="onboarding_renderer_description">فولكان (Vulkan) أحدث وقد يكون أسرع على بعض الأجهزة، لكن ليست كل الأجهزة تستفيد بنفس القدر — جودة الدعم تتفاوت. أوبن جي إل إي إس (OpenGL ES) هو الخيار الآمن والمتوافق الذي يعمل جيدًا في كل مكان تقريبًا. يمكنك تغيير هذا في أي وقت من الإعدادات المتقدمة.</string>
-    <string name="onboarding_renderer_auto">تلقائي</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">معلومات محرك الرسوميات غير متاحة حاليًا</string>
-    <string name="onboarding_renderer_change_later_note">يمكنك تغيير هذا في أي وقت من الإعدادات المتقدمة.</string>
     <string name="onboarding_permissions_title">شيء أخير</string>
     <string name="onboarding_permissions_body">منح صلاحية Shizuku يتيح لسطح المكتب البدء مباشرة، دون طلبات إضافية أثناء العمل. يمكنك تخطي هذا ومنحه لاحقًا من الإعدادات.</string>
     <string name="onboarding_skip_warning">بدون هذا، سيطلب سطح المكتب الصلاحيات بالطريقة المعتادة كل مرة يحتاجها فيها — وهذا أيضًا أمر طبيعي تمامًا، مجرد أسلوب مختلف.</string>

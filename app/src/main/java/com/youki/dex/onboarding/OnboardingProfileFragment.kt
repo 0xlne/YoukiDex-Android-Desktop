@@ -62,7 +62,7 @@ class OnboardingProfileFragment : Fragment(R.layout.fragment_onboarding_profile)
                     // Animated avatar — kept at full motion, no cropping applied.
                     MultiUserManager.setUserAvatarFromPickedMedia(ctx, userId, uri)
                 } else {
-                    // FIX (removed the manual crop screen — CropAvatarActivity):
+                    // Fix for removed the manual crop screen — CropAvatarActivity:
                     // that screen turned out to be a bad experience in
                     // practice (a black-circle-with-no-visible-confirm-button
                     // bug, plus an extra tap most people never actually used

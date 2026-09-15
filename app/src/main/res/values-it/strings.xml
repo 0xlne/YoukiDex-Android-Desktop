@@ -537,7 +537,6 @@
     <string name="bubble_opacity_summary">Controlla la trasparenza della bolla (100% = solida)</string>
     <string name="switch_user">Cambia utente</string>
     <string name="vp_speed_label">Velocità: %1$sx</string>
-    <string name="file_manager">Gestore file</string>
     <string name="app_menu_fullscreen_title">Apri il menu app a schermo intero</string>
     <string name="completed_successfully">Completato con successo</string>
     <string name="root_access_detected">Accesso Root rilevato (Magisk/KernelSU/su)</string>
@@ -733,7 +732,6 @@
     <string name="one_user_on_device">Un utente su questo dispositivo</string>
     <string name="sounds">Suoni</string>
     <string name="direct_items">elementi diretti</string>
-    <string name="lw_fps_limit">Limite FPS</string>
     <string name="media_access_already_granted">Accesso ai media già concesso</string>
     <string name="scale_factor_title">Fattore di scala finestra standard</string>
     <string name="developer_mode_already">La modalità sviluppatore è già attivata</string>
@@ -808,13 +806,6 @@
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Benvenuto in Youki DEX</string>
     <string name="onboarding_welcome_body">Configuriamo il tuo desktop. Ci vorrà solo un minuto.</string>
-    <string name="onboarding_renderer_title">Scegli il tuo motore di rendering</string>
-    <string name="onboarding_renderer_description">Vulkan è più recente e può essere più veloce su alcuni dispositivi, ma non tutti i dispositivi ne beneficiano allo stesso modo — la qualità del supporto varia. OpenGL ES è la scelta sicura e compatibile che funziona bene quasi ovunque. Puoi cambiarlo in qualsiasi momento dalle Impostazioni avanzate.</string>
-    <string name="onboarding_renderer_auto">Automatico</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Informazioni sul renderer non disponibili al momento</string>
-    <string name="onboarding_renderer_change_later_note">Puoi cambiarlo in qualsiasi momento dalle Impostazioni avanzate.</string>
     <string name="onboarding_permissions_title">Un\'altra cosa</string>
     <string name="onboarding_permissions_body">Concedere l\'accesso a Shizuku consente al desktop di avviarsi direttamente, senza richieste aggiuntive. Puoi saltare questo passaggio e concederlo più tardi dalle Impostazioni.</string>
     <string name="onboarding_skip_warning">Senza questo, il desktop chiederà i permessi nel modo consueto ogni volta che ne avrà bisogno — anche questo va benissimo, è solo un flusso diverso.</string>

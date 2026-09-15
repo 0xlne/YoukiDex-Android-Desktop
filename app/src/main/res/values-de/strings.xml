@@ -507,7 +507,6 @@ Zum Deinstallieren zuerst die Geräteverwaltungsberechtigung entfernen.</string>
     <string name="extracting_ellipsis">Wird extrahiert...</string>
     <string name="delete_item_confirm">„%1$s“ löschen?</string>
     <string name="about_version">Version</string>
-    <string name="file_manager">Dateimanager</string>
     <string name="lw_translate_x">X verschieben</string>
     <string name="lw_applied">Hintergrundbild angewendet</string>
     <string name="deleted_n_items">%1$d Elemente gelöscht</string>
@@ -531,7 +530,6 @@ Zum Deinstallieren zuerst die Geräteverwaltungsberechtigung entfernen.</string>
     <string name="tweak_battery_title">Akku-Boost &amp; Schnellladmodus</string>
     <string name="tweak_diskio_title">Disk-I/O- &amp; SurfaceFlinger-Boost</string>
     <string name="plugin_font_reset">Schriftart entfernen</string>
-    <string name="lw_fps_limit">FPS-Limit</string>
     <string name="copy_report">Bericht kopieren</string>
     <string name="sound_unlock">Entsperren</string>
     <string name="folder_empty">Ordner ist leer</string>
@@ -861,13 +859,6 @@ Zum Deinstallieren zuerst die Geräteverwaltungsberechtigung entfernen.</string>
     <!-- Onboarding screen (was missing translations entirely) -->
     <string name="onboarding_welcome_title">Willkommen bei Youki DEX</string>
     <string name="onboarding_welcome_body">Lass uns deinen Desktop einrichten. Das dauert nur eine Minute.</string>
-    <string name="onboarding_renderer_title">Wähle deine Rendering-Engine</string>
-    <string name="onboarding_renderer_description">Vulkan ist neuer und kann auf manchen Geräten schneller sein, aber nicht jedes Gerät profitiert gleich davon — die Unterstützungsqualität variiert. OpenGL ES ist die sichere, kompatible Wahl, die fast überall gut funktioniert. Du kannst dies jederzeit in den erweiterten Einstellungen ändern.</string>
-    <string name="onboarding_renderer_auto">Automatisch</string>
-    <string name="onboarding_renderer_vulkan">Vulkan</string>
-    <string name="onboarding_renderer_gles">OpenGL ES</string>
-    <string name="onboarding_renderer_vulkan_info_unavailable">Renderer-Informationen momentan nicht verfügbar</string>
-    <string name="onboarding_renderer_change_later_note">Du kannst dies jederzeit in den erweiterten Einstellungen ändern.</string>
     <string name="onboarding_permissions_title">Noch eine Sache</string>
     <string name="onboarding_permissions_body">Das Gewähren des Shizuku-Zugriffs lässt den Desktop direkt starten, ohne zusätzliche Abfragen. Du kannst dies überspringen und später in den Einstellungen gewähren.</string>
     <string name="onboarding_skip_warning">Ohne dies fragt der Desktop jedes Mal auf die übliche Weise nach Berechtigungen, wenn sie benötigt werden — das ist völlig in Ordnung, nur ein anderer Ablauf.</string>

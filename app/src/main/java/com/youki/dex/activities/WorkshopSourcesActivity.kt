@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -18,7 +17,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.youki.dex.R
-import com.youki.dex.workshop.data.WorkshopDatabase
 import com.youki.dex.workshop.data.WorkshopSource
 import com.youki.dex.workshop.data.WorkshopSourceDao
 import kotlinx.coroutines.flow.first

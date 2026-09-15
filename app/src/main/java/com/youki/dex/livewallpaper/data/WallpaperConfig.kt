@@ -58,11 +58,22 @@ data class WallpaperConfig(
     // opening the video in landscape starts with completely clean settings, as
     // if it were being opened for the first time — with no inheritance from
     // the portrait settings at all, exactly like the Free Transform pattern
-    // above. Every old field (fpsLimit/playbackSpeed/muted) stays as-is and is
-    // read as the "Portrait" setting, and its Landscape-suffixed counterpart
-    // was added alongside it.
-    val fpsLimit: Int = 60,        // 15..120 (no longer actually used after removing the filter)
+    // above. Every old field (playbackSpeed/muted) stays as-is and is read
+    // as the "Portrait" setting, and its Landscape-suffixed counterpart was
+    // added alongside it. (fpsLimit itself was removed entirely — see
+    // WallpaperConfigDao's own comment on COL_FPS_LIMIT for why the
+    // database column stays but nothing reads it into this class anymore.)
     val playbackSpeed: Float = 1f, // 0.25f..3.0f — Portrait only
+    // Max draw rate in FPS, or 0 for uncapped. NOT a reintroduction of the
+    // removed fpsLimit field (see this class's own comment further down on
+    // why that one was deleted) — that one filtered incoming video frames
+    // and dropped real ones, causing stutter. This one throttles the draw
+    // call itself (delays it, never drops a frame) — see
+    // WallpaperGLEngine.maxFps's doc comment for the exact mechanism.
+    // Global to the whole engine rather than per-orientation, matching how
+    // the Editor's own slider (fragment_ed_unified.xml) presents it as one
+    // "Performance" setting, not two.
+    val maxFps: Int = 0,
     val muted: Boolean = true,     // Portrait only
 
     // Audio pitch — a setting fully independent from speed, adjusted manually
